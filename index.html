@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TB ZNS Lernhilfe – 2.SJ Medizin UZH</title>
+  <meta name="description" content="Vollständige ZNS Lernhilfe mit Quiz für das 2. Semester Medizinstudium UZH"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a0a18; color: #e8dfd0; font-family: Georgia, serif; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a18; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    button { cursor: pointer; }
+    button:hover { opacity: 0.85; }
+    @media (max-width: 600px) {
+      .grid-2 { grid-template-columns: 1fr !important; }
+      .grid-3 { grid-template-columns: 1fr 1fr !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useCallback } = React;
+
+
+
+// ─────────────────────────────────────────────
+// VOLLSTÄNDIGE LERNKARTEN-DATEN
+// ─────────────────────────────────────────────
+const THEMEN = [
+  {
+    id: "motorik", titel: "Motorik", emoji: "🏃", farbe: "#e74c3c",
+    sektionen: [
+      { titel: "Motorische Areale (Kortex)", punkte: [
+        "Primärer Motorkortex (M1/Area 4): niedrigste Reizschwelle; elektrische Reizung → kontralaterale Muskelzuckungen",
+        "Supplementär-motorischer Kortex (SMA, medial): Bewegungsprogrammierung, bimanuale Koordination; erhält Eingang von Basalganglien; Läsion → bimanuale Koordinationsstörung",
+        "Prämotorischer Kortex (PM, lateral): initiale Bewegungsphase, Orientierung & Körperhaltung; erhält Eingang vom Zerebellum",
+        "Posterior-Parietaler Kortex: Verarbeitung komplexer sensorischer Info für Bewegungsprogramme",
+        "Broca-Areal: motorisches Sprachfeld (im Gyrus frontalis inferior)",
+        "Somatotopische Organisation: Homunkulus; Motorisch & sensorisch zueinander 'gespiegelt'",
+        "Reizschwelle von M → PM → SMA ansteigend",
+      ]},
+      { titel: "Motorische Bahnen (absteigend)", punkte: [
+        "Pyramidenbahn = Tractus corticospinalis: 80% kreuzen in Decussatio pyramidum (Medulla oblongata) → Tractus corticospinalis lateralis; 20% bleiben ipsilateral → Tractus corticospinalis anterior (kreuzen später segmental)",
+        "Fibrae corticonucleares: zu motorischen Hirnnervenkernen III–VII, IX–XII; meist kontralateral, Stirnast N.VII auch ipsilateral (bilaterale Innervation) → klinisch relevant bei zentraler vs. peripherer Fazialisparese",
+        "Ventromediales System: Tractus reticulospinalis (med.), Tractus vestibulospinalis, Tractus tectospinalis → Rumpf- & Standmotorik (Extensoren), bilateral, über mehrere Segmente",
+        "Dorsolaterales System: Tractus rubrospinalis + Tractus corticospinalis lateralis → Feinmotorik distale Extremitäten, Flexoren, unilateral, segmentspezifisch",
+        "Tractus rubrospinalis: vom Ncl. ruber (Mesencephalon) → kreuzt → Rückenmark; fördert Beuger",
+        "Tractus vestibulospinalis: von Vestibularkernen → Rückenmark; aktiviert Extensoren → Gleichgewicht",
+        "Tractus reticulospinalis medialis (pontiner Teil): aktiviert Extensoren (Haltungsmotorik)",
+        "Tractus reticulospinalis lateralis (medullärer Teil): fördert Beuger (Gegenpol zum medialen)",
+        "Tractus tectospinalis: vom Colliculus superior → RüMa (kreuzt); Augenbewegungssteuerung",
+      ]},
+      { titel: "Untere Motoneurone (RüMa)", punkte: [
+        "Somatotopie im Vorderhorn: Medial = proximal/Rumpfmuskeln; Lateral = distale Extremitäten",
+        "Ventral = Extensoren (Strecker); Dorsal = Flexoren (Beuger)",
+        "Motoneuronenpools erstrecken sich über mehrere Segmente",
+        "Oberes MN (Hirnrinde/Hirnstamm) vs. Unteres MN (Vorderhorn RüMa/Hirnnervenkerne)",
+        "Läsion oberes MN: Spastik, Hyperreflexie, Babinski+, keine Atrophie",
+        "Läsion unteres MN: schlaffe Lähmung, Atrophie, Faszikulationen, Hyporeflexie",
+        "~30 Interneurone auf 1 Motoneuron; fast alle supraspinalen Eingänge gehen über Interneurone",
+        "Motorische Einheiten: Typ I (slow, S), Typ IIa (fast-resistant, FR), Typ IIb (fast-fatiguable, FF); Typ bestimmt das Motoneuron",
+        "Sprouting: nach Motoneuronuntergang übernehmen Nachbar-MN die Muskelfasern → Fibre-type grouping",
+      ]},
+      { titel: "Muskelrezeptoren", punkte: [
+        "Muskelspindel (Ia-Fasern): parallel zur extrafusalen Muskulatur; registriert Muskellänge; adäquater Reiz = Dehnung",
+        "γ-Motoneurone innervieren polare Enden der Spindel → regulieren Empfindlichkeit; verhindern Spindelpause",
+        "α-γ-Koaktivierung: gleichzeitige Aktivierung von α- und γ-MN → Spindel bleibt während Willkürkontraktion aktiv",
+        "Golgi-Sehnenorgan (Ib-Fasern): in Serie geschaltet; registriert Muskelspannung (Kraft); verhindert Überkontraktion (negative Rückkopplung → hemmt agonistisches α-MN)",
+        "Dehnungsreflex (monosynaptisch): Muskelspindel → Ia-Afferenz → α-MN gleicher Muskel + reziproke Hemmung Antagonist",
+        "Renshaw-Zellen: rekurrente Hemmung; cholinerge Kollaterale von α-MN → Renshaw → inhibiert (Glycin) dasselbe α-MN → Dämpfung überschießender Kontraktion",
+      ]},
+      { titel: "Hirnstamm-Motorik & Reflexe", punkte: [
+        "Haltungsmotorik (Stützmotorik): Extensoren, proximal, tonisch, unbewusst, Hirnstammkontrolle",
+        "Zielmotorik: Flexoren, distal, phasisch, willkürlich, kortikospinale Kontrolle",
+        "Dezerebrierungsstarre: Durchtrennung auf Höhe der Vierhügelplatte → Wegfall hemmender Kortexeinflüsse auf FR → übersteigerte Extensor-Aktivierung",
+        "Halsreflex: Kopflage relativ zum Rumpf (Propriozeption Halsmuskulatur) → Tonus-Modulation",
+        "Labyrinthreflex: absolute Kopflage im Raum (Vestibularapparat) → Tonus-Modulation",
+        "Posturale Reflexe: polysynaptisch, long-loop (über Kortex), long-latency; Gegenregulation bei Störung",
+        "Antizipatorische Kontrolle: Voranpassung der Haltung vor erwarteter Instabilität",
+        "MLR (Mesencephale Locomotor Region): Mittelhirnkern → Auslösung Gangbewegung",
+        "CPG (Central Pattern Generators): im RüMa; alternierende Gangmotorik durch gegenseitige Hemmung von Halbzentren; aktivierbar durch mechanische Reize oder monoaminerge Bahnen",
+      ]},
+      { titel: "Motorische Störungen", punkte: [
+        "Parese: teilweise Lähmung; Plegie/Paralyse: vollständige Lähmung",
+        "Hemiplegie: einseitige Halbseitenlähmung; Paraplegie: beide Beine; Tetraplegie: alle 4 Extremitäten",
+        "Schlaffe Lähmung: unteres MN betroffen; spastische Lähmung: oberes MN betroffen",
+        "Ataxie: Koordinationsstörung, meist zerebellär oder vestibulär",
+        "Intentionstremor: Zittern bei Zielbewegung (Kleinhirn); Ruhetremor: Parkinson (Basalganglien)",
+        "Akinese/Hypokinese + Rigor: Parkinson; Hyperkinese/Chorea: Huntington",
+        "Dysdiadochokinese: Störung bei schnellen Wechselbewegungen (Kleinhirn)",
+        "Babinski-Reflex: bei Erwachsenen Zeichen einer Pyramidenbahnläsion (pathologisch; physiologisch bei Säuglingen)",
+        "Brown-Séquard-Syndrom: Halbseitige RüMa-Durchtrennung → ipsilateral Lähmung + Tiefensensibilitätsverlust; kontralateral Schmerz/Temperaturverlust",
+      ]},
+    ]
+  },
+  {
+    id: "zerebellum", titel: "Zerebellum", emoji: "🧠", farbe: "#8e44ad",
+    sektionen: [
+      { titel: "Anatomie & Gliederung", punkte: [
+        "Teil des Metencephalons (Hinterhirn); besteht aus 2 Hemisphären + Vermis cerebelli",
+        "3 Lappen: Lobus anterior (vor Fissura prima), Lobus posterior, Lobus flocculonodularis (hinter Fissura posterolateralis; = Nodulus + Flocculus)",
+        "Kleinhirnkerne (lateral → medial): Ncl. dentatus (größter, gezahnt), Ncl. emboliformis, Ncl. globosus → Ncl. interpositus = Ncl. emboliformis + globosus, Ncl. fastigii (Dachkern, am Dach des IV. Ventrikels)",
+        "Vestibulozerebellum (Archicerebellum) = Lobus flocculonodularis → Gleichgewicht & Augenbewegungen → Ncl. vestibularis",
+        "Spinozerebellum (Paleocerebellum): Vermis + intermediäre Hemisphäre → Haltung & Lokomotion; Vermis → Ncl. fastigii; intermediäre Zone → Ncl. interpositus",
+        "Zerebrozerebellum/Pontozerebellum (Neozerebellum): laterale Hemisphäre → Ncl. dentatus → Bewegungsplanung",
+        "3 Kleinhirnstiele: inferior (Pons zu Medulla), medius (nur Afferenzen aus Pons), superior (v.a. Efferenzen zum Thalamus/Ncl. ruber)",
+        "Frakturierte Somatotopie: multiple Repräsentationen des Körpers im Kleinhirn",
+      ]},
+      { titel: "Histologie des Kleinhirnkortex", punkte: [
+        "Schichten (außen → innen): Stratum moleculare → Stratum ganglionare (Purkinjezellen) → Stratum granulosum (Körnerzellen)",
+        "Purkinje-Zellen (PZ): GABAerg; EINZIGER Ausgang des Kleinhirnkortex → projizieren auf Kleinhirnkerne",
+        "Dendritenbaum der PZ: 2D, sagittal, ~100.000 Dornfortsätze; empfängt Parallelfasern",
+        "Körnerzellen (KZ): glutamaterg; bilden Parallelfasern (T-förmig, längs, ~450 PZ pro Parallelfaser; ~200.000 Parallelfasern pro PZ)",
+        "Korbzellen & Sternzellen: GABAerg; hemmen PZ (laterale Hemmung/Kontrastverstärkung)",
+        "Golgi-Zellen: GABAerg; negative Rückkopplung auf Körnerzellen (Feed-Forward-Inhibition)",
+        "Moosfaser-Eingang: indirekt über Körnerzellen → Parallelfasern → PZ (simple spikes); Hauptquelle: Ncll. pontis (Moosfasern auch direkt zu Kleinhirnkernen)",
+        "Kletterfaser-Eingang: NUR aus unterer Olive; DIREKT auf PZ (1 KF pro PZ; 1 KF kontaktiert 7-10 PZ); massive Erregung → complex spikes (Ca2+-AP); codiert Fehlersignale",
+        "Kleinhirn-Glomerulus: synaptischer Komplex im Stratum granulosum; zentral Moosfaser-Bouton + Dendriten von KZ + Golgi-Zellen",
+      ]},
+      { titel: "Kleinhirnschleifen & Lernprozesse", punkte: [
+        "LTD (Langzeit-Depression): gleichzeitige Aktivierung von Parallelfaser (PF) + Kletterfaser (KF) → complex spike → Abbau von AMPA-Rezeptoren (über mGluR1 → PKC) → EPSP der PZ schwächer → Kleinhirnkerne weniger gehemmt (Disinhibition)",
+        "Motorisches Lernen im Kleinhirn: error-based learning; Fehlersignal über Kletterfasern (untere Olive)",
+        "Kortex: unüberwachtes Lernen; Basalganglien: Belohnungslernen; Kleinhirn: überwachtes Lernen",
+        "Klassische Konditionierung des Lidschlussreflexes: CS → Ncll. pontis → KZ → PZ; US → Olive → KF; Koaktivierung → LTD → CS allein reicht für Lidschluss (Ncl. interpositus)",
+        "Timing-Hypothese: Kleinhirn erfasst zeitliche Aspekte von Bewegungen (Anordnung der Parallelfasern)",
+        "Guillain-Mollaret-Dreieck: Ncl. dentatus ↔ Ncl. ruber ↔ Ncl. olivaris inferior (über Tractus tegmentalis centralis und Tractus olivocerebellaris)",
+        "Efferenzkopie: Abschrift der geplanten Bewegung → Zerebellum (via Ncll. pontis); Abgleich mit Afferenz aus Peripherie; Fehlersignal → untere Olive → Kletterfasern → Korrektur",
+      ]},
+      { titel: "Kleinhirnläsionen & Syndrome", punkte: [
+        "Dysmetrie: fehlerhafte Abmessung (Hypermetrie = überschießend; Hypometrie = zu kurz); Antagonist bremst zu spät",
+        "Ataxie: Koordinationsstörung; lateral → Zeigeataxie; Vermis → Gang- und Standataxie; Nodulus/Flocculus → Augenbewegungsstörungen (Sakkadendysmetrie)",
+        "Intentionstremor: bei Zielbewegung (Finger-Nase-Test); Kleinhirnzeichen",
+        "Dysdiadochokinese: Störung bei schnellen Wechselbewegungen (z.B. Winken)",
+        "Asynergien: Dekomposition der Bewegung (Bewegungsprogrammteile zerfallen)",
+        "Vestibulozerebellum-Läsion: Übelkeit, Erbrechen, Pendelnystagmus",
+        "Ursachen: Tumore, Schlaganfall, erbliche Ataxien, Kleinhirnatrophie bei Alkoholmissbrauch",
+      ]},
+    ]
+  },
+  {
+    id: "basalganglien", titel: "Basalganglien", emoji: "⚙️", farbe: "#2980b9",
+    sektionen: [
+      { titel: "Anatomie & Nomenklatur", punkte: [
+        "Striatum = Ncl. caudatus + Putamen + Ncl. accumbens (ventrales Striatum)",
+        "Ncl. lentiformis = Putamen + Globus pallidus",
+        "Corpus striatum = Ncl. caudatus + Putamen (durch Capsula interna getrennt, aber graue Brücken → gestreift)",
+        "Basalganglien funktionell: Striatum + Globus pallidus (GPe + GPi) + Ncl. subthalamicus (STN) + Substantia nigra (SNc + SNr)",
+        "Derivate Telencephalon: Ncl. caudatus, Putamen, Ncl. accumbens",
+        "Derivate Diencephalon: Globus pallidus, STN, SNr",
+        "Derivate Mesencephalon: SNc (dopaminerg, Neuromelanin → schwarz)",
+        "SNc: größte Abteilung des dopaminergen Systems → mesostriatales System",
+        "SNr: GABAerge Projektionen zum Colliculus superior",
+        "STN: einzige exzitatorische glutamaterge Neurone innerhalb der Basalganglien",
+      ]},
+      { titel: "Schaltkreise: Direkter & Indirekter Weg", punkte: [
+        "Alle Projektionsneurone der Basalganglien sind GABAAERG (inhibitorisch)",
+        "Grundprinzip: tonische Inhibition → Bewegung nur durch Disinhibition möglich",
+        "Direkter Weg (D1-MSN): Kortex → Striatum (D1) → GPi/SNr (gehemmt) → Thalamus DISINHIBIERT → Kortex → MEHR Bewegung",
+        "Indirekter Weg (D2-MSN): Kortex → Striatum (D2) → GPe (gehemmt) → STN enthemmt → GPi/SNr aktiviert → Thalamus HEMMT → WENIGER Bewegung",
+        "Hyperdirekter Weg: Kortex → STN direkt (schnell) → GPi/SNr → Thalamus gehemmt",
+        "Dopamin aus SNc: D1-Rezeptoren aktivierend (cAMP↑, direkter Weg↑); D2-Rezeptoren hemmend (cAMP↓, indirekter Weg↓)",
+        "MSN = Medium Spiny Neurons: GABAerge Projektionsneurone; viele Dornfortsätze für Kortex-Synapsen; integrieren kortikalen + dopaminergen Input",
+      ]},
+      { titel: "Basalganglien-Schleifen", punkte: [
+        "Motor-Schleife: prämotorisch/SMA → Striatum → GPi/SNr → Thalamus (VL/VA) → Kortex",
+        "Okulomotorik-Schleife: SNr → Colliculus superior (Augenbewegungen)",
+        "Präfrontale Schleife: präfrontaler Kortex → anteriorer Caudatus → GPi/SNr → Thalamus (MD/VA) → präfrontaler Kortex; Kognition, Verhaltensflexibilität, Planung",
+        "Limbische Schleife: Limbischer Kortex → Ncl. accumbens + ventrales Pallidum → Thalamus (MD) → Limbischer Kortex; Motivation, Belohnung",
+        "Ncl. accumbens erhält Dopamin aus VTA (Area tegmentalis ventralis) → Belohnungssystem; Suchtverhalten bei Dysregulation",
+        "Reinforcement Learning: Bewegungsmuster, die zu Belohnung führen, werden verstärkt",
+      ]},
+      { titel: "Erkrankungen der Basalganglien", punkte: [
+        "Morbus Parkinson: Degeneration dopaminerger Neurone in SNc → Dopaminmangel im Striatum",
+        "Parkinson Pathogenese: indirekter Weg (D2) überwiegt → Thalamus stärker gehemmt → Akinese, Bradykinese, Rigor, Ruhetremor",
+        "Parkinson Histologie: Lewy Bodies (intrazelluläre α-Synuclein-Aggregation) in SNc-Neuronen; idiopathisch, selten familiär (Chromosom 4? Nein → SNCA, LRRK2)",
+        "Parkinson Therapie: L-Dopa (Vorläufer Dopamin, rein symptomatisch); Tiefe Hirnstimulation des STN (Inhibition STN → weniger GPi-Aktivierung); STN-Läsion; Zell-Transplantation (experimentell)",
+        "Parkinson nicht nur motorisch: Anosmie, Obstipation, autonome Dysfunktion (Synkopen), kognitive Defizite, Schlafstörungen",
+        "Huntington-Krankheit: autosomal-dominant, Chromosom 4, CAG-Repeat im Huntingtin-Gen (normal ≤35; krank >40, vollständige Penetranz; 250 max.); Repeat-Anzahl bestimmt Erkrankungsalter",
+        "Huntington Pathogenese früh: Degeneration D2-MSN → GPe nicht mehr gehemmt → STN gehemmt (indirekter Weg fällt weg) → direkter Weg überwiegt → HYPERKINESE (Chorea)",
+        "Huntington Pathogenese spät: auch D1-MSN degenerieren → AKINESE & RIGOR (wie Parkinson)",
+        "Chorea: unwillkürliche, überschießende, unregelmäßige Bewegungen bei Hyperkinese",
+      ]},
+    ]
+  },
+  {
+    id: "thalamus", titel: "Thalamus", emoji: "🔀", farbe: "#27ae60",
+    sektionen: [
+      { titel: "Grundlagen & Anatomie", punkte: [
+        "«Tor zum Bewusstsein» – größter Teil des Diencephalon; griech. thalamos = Kammer",
+        "Schaltet alle Sinnesqualitäten außer Geruch! (Olfaktion geht direkt zum Kortex)",
+        "Bildet zusammen mit Hypothalamus das Diencephalon; 'eigentlicher' Thalamus = Thalamus dorsalis",
+        "Subthalamus (ventraler Thalamus): Ncl. subthalamicus + Globus pallidus (entwicklungsgeschichtl. Diencephalon)",
+        "Epithalamus: Habenula, Epiphyse/Glandula pinealis (einzige singuläre Struktur im Gehirn), Area pretectalis",
+        "Metathalamus: Corpus geniculatum laterale (CGL, Sehbahn) + Corpus geniculatum mediale (CGM, Hörbahn)",
+        "120 Thalamuskerne, unterteilt durch Lamina medullaris interna; Thalamusstiele (Radiatio thalami) in Capsula interna",
+        "Nucleus reticularis: außen, GABAerg, kappenartig lateral; hemmt andere Thalamuskerne → wichtig für Filterung",
+      ]},
+      { titel: "Funktionelle Kerne", punkte: [
+        "Motorische Kerne: VL (Ncl. ventralis lateralis) + VA (Ncl. ventralis anterior) → Afferenzen aus Zerebellum, GPi, SNr; Efferenzen → M1, PM, SMA",
+        "Somatosensorische Kerne: VPL (Ncl. ventralis posterolateralis) → Rumpf/Extremitäten (Hinterstrang + Spinothalamikus); VPM (Ncl. ventralis posteromedialis) → Gesicht (Trigeminus); Efferenzen → S1",
+        "Anteriore Kerngruppe: limbisches System, Gedächtnis, Vigilanz; Teil des Papez-Kreises",
+        "Papez-Kreis: Hippocampus → Fornix → Corpus mammillare → Tractus mammillothalamicus → Ncll. anteriores thalami → Gyrus cinguli → Hippocampus",
+        "Mediale Kerngruppe: kognitive Fähigkeiten; Ncl. mediodorsalis (MD) wichtigster Kern; Afferenzen aus Amygdala, Basalganglien",
+        "Posteriore Kerngruppe: Pulvinar → visuelle/auditorische Assoziation; CGL → Sehbahn; CGM → Hörbahn",
+        "Intralaminäre Kerne (unspezifisch): Ncl. centromedianus; unspezifische Weckreaktion (ARAS); Efferenzen → Striatum",
+        "Core-Weg (spezifisch): Projektion in Schicht IV des Kortex; Weiterleitung einer Sinnesmodalität",
+        "Matrix-Weg (unspezifisch): Projektion in Schicht I (apikale Dendriten der Pyramidenzellen) und Schicht VI; diffuser, modulatorisch",
+      ]},
+      { titel: "Thalamo-kortikale Rhythmen & Schlaf", punkte: [
+        "Schlaf-Modus: Thalamuszellen hyperpolarisiert → Burst-Modus (durch Schrittmacherstrom: If-Kanal bei Hyperpolarisation öffnet → Depolarisation bis Schwelle → transienter Ca2+-Kanal öffnet → Burst von APs → Repolarisation → Zyklus beginnt) → langsame Delta-Wellen im EEG",
+        "Wach-Modus: Thalamuszellen leicht depolarisiert → kontinuierliches Feuern → Reize werden an Kortex weitergeleitet; Glutamat, ACh, NA, Histamin, Serotonin halten Wachheit",
+        "Schlafspindeln: typisch für Non-REM-Phase N2; 12-14 Hz; durch Thalamo-kortikale Interaktion",
+        "K-Komplexe: langsame Wellen hoher Amplitude in N2; evozierbar durch Außenreize",
+        "Glutamatkonzentration im Thalamus sinkt bei Schlafübergang → Thalamus hyperpolarisiert",
+        "ARAS (aufsteigendes retikuläres Aktivierungssystem): Formatio reticularis → Thalamus → Kortex; Modulatoren: ACh (pontine Kerne), NA (Locus coeruleus), Serotonin (Raphe-Kerne), Histamin (post. Hypothalamus), Dopamin (SNc/VTA)",
+        "Thalamus-Infarkt: Doppelbilder, Gesichtsfeldausfälle, Bewusstseinsveränderungen, Gedächtnisstörungen (Amnesie), Hemiparese kontralateral, Sprachstörungen",
+      ]},
+    ]
+  },
+  {
+    id: "neocortex", titel: "Neocortex", emoji: "📡", farbe: "#e67e22",
+    sektionen: [
+      { titel: "Histologie – 6 Schichten", punkte: [
+        "Schicht I (Molekularschicht): wenig Nervenzellen; Dendriten der Pyramidenzellen aus Schicht V + Axone unspezifischer Thalamuskerne (Matrix-Weg)",
+        "Schicht II (äussere Körnerschicht): kleine Pyramidenzellen + Sternzellen; kortiko-kortikale Verbindungen",
+        "Schicht III (äussere Pyramidenschicht): größere Pyramidenzellen; Assoziations- und Kommissurenfasern",
+        "Schicht IV (innere Körnerschicht): Sternzellen; empfängt spezifische thalamische Afferenzen (Core-Weg); in motorischen Arealen schwach ausgeprägt; Baillarger-Streifen",
+        "Schicht V (innere Pyramidenschicht): GROSSE Pyramidenzellen (Betz-Riesenzellen in M1); Axone → Pyramidenbahn (Fibrae corticospinales, corticonucleares, corticostriatales, pontinae); Dendriten bis Schicht I",
+        "Schicht VI (multiforme Schicht): kortikothalamische Neurone (→ Schicht VI projiziert zurück zu Thalamus); unscharfe Grenze zum Marklager",
+        "Heterotypischer Neocortex: primäre Kortexareale mit Dominanz einer Schicht (z.B. Schicht IV in sensorischen, Schicht V in motorischen Arealen)",
+        "Homotypischer Neocortex: Assoziationskortex; gleichmäßige Schichten; Integration multimodaler Info",
+      ]},
+      { titel: "EEG, fMRI & Messtechniken", punkte: [
+        "EEG misst Summenpotentiale postsynaptischer Potentiale (EPSP/IPSP), KEINE Aktionspotentiale!",
+        "Frequenzbänder: Delta 0.5-3 Hz (Tiefschlaf, große Amplitude, synchron); Theta 4-7 Hz; Alpha 8-13 Hz (entspannt, Augen zu); Beta 14-30 Hz (aktiv)",
+        "Große EEG-Amplitude = synchrone Aktivität vieler Neurone; kleine Amplitude = asynchrone Aktivität",
+        "Bereitschaftspotential: 100-800ms VOR einer Willkürbewegung; über frontalem Kortex; Korrelat der Bewegungsplanung",
+        "EEG-Oberflächenpositivität: wenn synaptische Eingänge in tiefen Schichten (z.B. Schicht IV); Negativität bei Eingängen in Schicht I",
+        "fMRI (BOLD-Effekt): Blutflussänderung als indirektes Maß für neuronale Aktivität; oxyg. Hb vs. deoxyg. Hb haben unterschiedliche magnetische Eigenschaften; zeitliche Auflösung ~Sekunden",
+        "Neuropixels: 1cm langer Draht mit 1000 Kontakten; Ableitung von Hunderten Einzelzellen gleichzeitig",
+        "2-Photonen-Mikroskopie: bis 1mm Gewebetiefe in vivo; mit Calcium-Indikatoren (GCaMP); sogar einzelne APs detektierbar",
+        "Populationsvektoren in M1: Einzelzellen codieren für Bewegungsrichtung; Summenvektor entspricht tatsächlicher Bewegungsrichtung → Grundlage für Brain-Machine-Interfaces",
+      ]},
+      { titel: "Kortikale Verarbeitung", punkte: [
+        "Bottom-Up: Thalamus → Schicht IV → Schicht 2/3 → nächst höheres Areal (immer feinere Reizverarbeitung)",
+        "Top-Down: Schicht V höherer Areale → Schicht I tieferer Areale (Erwartungen, Aufmerksamkeit, Modulation)",
+        "Somatosensorischer Kortex S1: Area 1, 3b = Oberflächensensibilität; Area 3a = Tiefensensibilität; Area 2 = beides; VPL/VPM → S1",
+        "S2 erhält Afferenzen von S1 und Thalamus direkt; sendet zu Amygdala und Hippocampus",
+        "Primärer visueller Kortex V1 (Area striata): retinotopisch; Orientierungsselektivität (Pinwheel-Anordnung bei Katze); Magnifikation der Macula",
+        "Dorsaler Pfad (Wo-Weg): Okzipital → Parietal; räumliches Sehen",
+        "Ventraler Pfad (Was-Weg): Okzipital → Temporal; Objekterkennung; konvergiert im entorhinalen Kortex → Hippocampus",
+        "Primärer auditorischer Kortex: Gyri temporales transversi (Heschl-Querwindungen); tonotopisch; Wernicke-Areal: sensorisches Sprachzentrum",
+        "Neglect: Vernachlässigung einer Körperseite/eines Gesichtsfelds; meist rechts-parietale Läsion → linker Neglect; Anosognosie: Defizit wird verneint",
+        "Präfrontaler Kortex: Exekutivfunktionen (Ziele setzen, Planung, Impulskontrolle, Aufmerksamkeit); Läsion → Persönlichkeitsveränderung (Phineas Gage); oberes Frontalhirnsyndrom: Antriebsarmut; unteres: Disinhibition",
+      ]},
+    ]
+  },
+  {
+    id: "hirnhaeute", titel: "Hirnhäute, Ventrikel & Blutversorgung", emoji: "🩸", farbe: "#16a085",
+    sektionen: [
+      { titel: "Meningen & Liquorräume", punkte: [
+        "Pachymeninx: Dura mater (hart); Leptomeninx: Arachnoidea + Pia mater (weich)",
+        "Dura mater im Schädel = Periost → Epiduralraum im Gehirn PATHOLOGISCH (Ausnahme: Spinalkanal → physiologisch)",
+        "Subduraler Raum: zwischen Dura und Arachnoidea → normalerweise nicht vorhanden (pathologisch bei subduralем Hämatom)",
+        "Subarachnoidalraum: zwischen Arachnoidea und Pia → mit Liquor gefüllt (physiologisch)",
+        "Pia mater: folgt allen Furchen; begleitet Blutgefässe beim Eindringen ins Gehirn; diffusionsoffen",
+        "Arachnoidea: Tight Junctions → Blut-Liquor-Barriere; Trabekel zur Pia; Pacchioni-Granulationen am Sinus sagittalis superior → Liquorresorption",
+        "Dura-Septen: Falx cerebri (zwischen Hemisphären), Tentorium cerebelli (über Kleinhirn); Incisura tentorii: Öffnung für Hirnstamm; Sinus durae matris: venöse Blutleiter (klappenslos)",
+        "Brückenvenen: von Hirnoberfläche → durchbrechen Dura → münden in Sinus sagittalis superior (bei Schädel-Hirn-Trauma gefährdet → subdurales Hämatom)",
+      ]},
+      { titel: "Ventrikelsystem & Liquor", punkte: [
+        "Seitenventrikel (Telencephalon): Pars centralis + Cornu anterius + Cornu posterius + Cornu temporale/inferius",
+        "3. Ventrikel (Diencephalon): zwischen Thalami; Foramen interventriculare (Monroi) → Verbindung zu Seitenventrikeln (keine direkte Verbindung der Seitenventrikel untereinander!)",
+        "Aquaeductus mesencephali (Sylvii): verbindet 3. mit 4. Ventrikel; engste Stelle",
+        "4. Ventrikel (Pons + Medulla oblongata): Fossa rhomboidea (Boden); Apertura mediana (Magendie) + 2 Aperturae laterales (Luschkae) → einzige Verbindung zum Subarachnoidalraum",
+        "Plexus choroideus: aus Tela choroidea (Pia-Abkömmling) + Plexusepithel (Tight Junctions); sezerniert Liquor; in allen Ventrikeln (außer Cornu ant. und post.)",
+        "Liquor: ~150 ml Totalvolumen, 100 ml im Subarachnoidalraum; tägl. Produktion ~600 ml (4x Austausch/Tag); klares Ultrafiltrat",
+        "Liquorfluss: Seitenventrikel → 3. V → Aquädukt → 4. V → Subarachnoidalraum → Pacchioni-Granulationen → venöse Sinus",
+        "Ependymzellen: kleiden Ventrikel aus (Kinozilien → Liquortransport); ohne Tight Junctions → Liquor kann ins Hirngewebe diffundieren",
+        "Glymphatisches System: perivaskuläre Räume (Virchow-Robin) → Liquor spült Hirnparenchym; hauptsächlich im Schlaf (Neurone 'schrumpfen' → mehr EZR); Abtransport von Stoffwechselprodukten (z.B. β-Amyloid!)",
+      ]},
+      { titel: "Blut-Hirn-Schranke & Blutversorgung", punkte: [
+        "Blut-Hirn-Schranke: Endothelzellen (Tight Junctions) + Astrozytenfüsschen (Membrana limitans gliae) → kein direkter Blut-Hirnkontakt; nur transzellulärer Transport",
+        "Blut-Liquor-Schranke: Plexusepithel mit Tight Junctions; Kapillaren im Plexus sind fenestriert!",
+        "Zirkumventrikuläre Organe (KEINE BHS): Hypophyse, Glandula pinealis, Plexus choroideus, Area postrema → wichtig für Hormon-Sensing",
+        "A. carotis interna → A. cerebri anterior (mediale Hemisphäre Frontal/Parietal, Basalganglien rostral) + A. cerebri media (laterale Hemisphäre, Insula, Basalganglien, Capsula interna!) + A. choroidea anterior (Hippocampus, Plexus choroideus, Capsula interna)",
+        "A. vertebralis → A. basilaris → A. cerebri posterior (Okzipitallappen, kaudales Diencephalon) + AICA + PICA + ASCA + Aa. pontis",
+        "Circulus arteriosus Willisii: A. communicans anterior + Aa. communicantes posteriores; Kollateralkreislauf; Abgänge = Endarterien (→ Infarkt bei Verschluss!)",
+        "Venöser Abfluss: V. jugularis interna (Hauptweg) ← Sinus durae matris (Sinus sagittalis superior, rectus, transversus, sigmoideus) ← Brückenvenen/oberflächliche Hirnvenen; tief: V. basalis + V. cerebri interna → V. cerebri magna (Galeni) → Sinus rectus",
+        "Schlaganfall: ischämisch (Hypoperfusion) oder hämorrhagisch (Blutung); A. cerebri media häufigster Infarktort → Hemiplegie, Aphasie (dominant)",
+      ]},
+    ]
+  },
+  {
+    id: "rueckenmark", titel: "Rückenmark & Spinalnerven", emoji: "🦴", farbe: "#c0392b",
+    sektionen: [
+      { titel: "Anatomie & Segmente", punkte: [
+        "31 Segmente: C1-8 (8), Th1-12 (12), L1-5 (5), S1-5 (5), Co1-2 (1-2)",
+        "Intumescentia cervicalis (C4-Th1): für Plexus brachialis (Arminnervation)",
+        "Intumescentia lumbosacralis (L1-S3): für Plexus lumbosacralis (Beininnervation)",
+        "Conus medullaris: kegelförmiges Ende des RüMa (~L1); Filum terminale: Gliastrang, Verankerung am Os coccygis",
+        "Cauda equina: Nervenwurzeln unterhalb L2; Lumbalpunktion sicher hier (L3/L4 oder L4/L5)",
+        "Wachstumsbedingt: Nervenwurzel-Austritt im RüMa ≠ Foramen intervertebrale auf gleicher Höhe (Cauda equina bildet sich daher)",
+        "Lig. denticulatum (Pia-Faserplatte): hält RüMa im Duralsack in Position",
+        "Epiduralraum im Spinalkanal: physiologisch (Fettgewebe + Venenplexus); für Epiduralanästhesie genutzt",
+        "Plexus cervicalis (C1-C4): Kopf, Hals, Zwerchfell; Plexus brachialis (C5-Th1): Schulter, Arm; Plexus lumbalis (L1-L4): Hüfte, Oberschenkel; Plexus sacralis (L4-S3): Gesäß, Bein, Fuß",
+      ]},
+      { titel: "Querschnittsanatomie", punkte: [
+        "Graue Substanz (Schmetterling): Vorderhorn (motorisch, Schicht VIII-IX), Hinterhorn (sensorisch, Schicht I-VI), Seitenhorn (vegetativ, nur Th1-L2 Sympathikus + S2-4 Parasympathikus)",
+        "Substantia gelatinosa (Schicht II): Schmerzafferenzen",
+        "Ncl. proprius (Schicht III-VI): 1. Synapse protopathischer Sensibilität (Tractus spinothalamicus)",
+        "Ncl. dorsalis/Clarke-Stilling-Säule (Schicht VII, nur Th1-L2): Umschaltung unbewusste Propriozeption → Tractus spinocerebellaris",
+        "Ncl. intermediolateralis (C8-L2/3): präganglionäre Sympathikus-Neurone",
+        "Ncll. parasympathici sacrales (S2-4): präganglionäre Parasympathikus-Neurone",
+        "Commissura grisea: verbindet beide RüMa-Hälften; Commissura alba anterior: kreuzt Bahnen (u.a. Tractus spinothalamicus)",
+        "Weiße Substanz: Vorderstrang (Funiculus anterior), Seitenstrang (Funiculus lateralis), Hinterstrang (Funiculus posterior); weiße Substanz nimmt von zervikal nach kaudal ab",
+        "Dermatom: Hautareal eines Spinalnerven; C1 fehlt (keine Hinterwurzel); Gesicht: N. trigeminus",
+      ]},
+      { titel: "Spinale Reflexe & Bahnen", punkte: [
+        "Eigenreflex (monosynaptisch): Ia-Afferenz → α-MN gleicher Muskel; + reziproke Hemmung Antagonist (via Ia-Interneuron); klinisch: Patellarsehnenreflex (L3/L4), Bizepssehnenreflex (C5/C6), Trizepssehnenreflex (C7/C8)",
+        "Fremdreflex (polysynaptisch): Haut-Rezeptoren → Interneurone → MN; Flexorreflex (Rückziehen) + gekreuzter Extensorreflex (Standbein streckt)",
+        "Hinterstrangbahn (Lemniskales System): Epikritik + bewusste Propriozeption; Fasciculus gracilis (untere Ext., medial) + Fasciculus cuneatus (obere Ext., lateral); ipsilateral im Hinterstrang → Ncl. gracilis/cuneatus (Medulla oblongata) → Decussatio lemniscorum → Lemniscus medialis → VPL",
+        "Tractus spinothalamicus lateralis: Schmerz, Temperatur, Juckreiz; 1. Neuron → Substantia gelatinosa selbes Segment → 2. Neuron kreuzt sofort → Vorderseitenstrang kontralateral → VPL; Modalitäten: Aδ (erster, schneller Schmerz) + C-Fasern (zweiter, dumpfer Schmerz)",
+        "Tractus spinothalamicus anterior: grobe Berührung; kreuzt 1-2 Segmente weiter; Vorderstrang",
+        "Tractus spinocerebellaris posterior (ipsilateral, Clarke-Säule → Ped. cerebellaris inferior): unbewusste Propriozeption untere Extremitäten",
+        "Tractus spinocerebellaris anterior: kreuzt + Re-Kreuzung im Velum medullare superius → Ped. cerebellaris superior; sakral bis thorakal",
+        "Cuneocerebelläre Bahnen: Propriozeption obere Extremitäten → Ncl. cuneatus accessorius → Ped. cerebellaris inferior",
+      ]},
+    ]
+  },
+  {
+    id: "somatosensorik", titel: "Somatosensorik", emoji: "👆", farbe: "#f39c12",
+    sektionen: [
+      { titel: "Rezeptoren der Haut", punkte: [
+        "SA-I (Merkel-Zellen): langsam adaptierend; kleines rezeptives Feld; adäquater Reiz: Druck/Punktberührung; Intensitätsdetektoren",
+        "SA-II (Ruffini-Körperchen): langsam adaptierend; großes rezeptives Feld, tief; adäquater Reiz: Hautdehnung",
+        "FA-I/RA-I (Meissner-Körperchen): schnell adaptierend; kleines rezeptives Feld; adäquater Reiz: Berührung, Bewegungserfassung",
+        "FA-II/RA-II/PC (Vater-Pacini-Körperchen): sehr schnell adaptierend; großes rezeptives Feld, tief; adäquater Reiz: Vibration",
+        "Haarfollikel-Sensoren: schnell adaptierend; Berührung (evolutionär beim Menschen weniger bedeutsam)",
+        "Nervenfaserklassen: Aβ = lemniskales System (Mechano, Propriozeption Aα); Aδ + C = spinothalamisches System (Nozizeption, Thermozeption)",
+        "Zweipunkteschwelle: Fingerkuppe/Zunge 1-3 mm; Rücken/Oberarm 50-100 mm (abhängig von Rezeptordichte und -tiefe)",
+        "SA-I und RA-I: häufig, oberflächlich, kleine rezeptive Felder; SA-II und RA-II: spärlicher, tief, große Felder",
+      ]},
+      { titel: "Schmerzleitung & Nozizeption", punkte: [
+        "Nozizeptoren: spezifische Schmerzfasern; feuern erst bei noxischen Reizen; Spezifitätstheorie",
+        "Erster Schmerz (schnell, scharf, gut lokalisierbar): Aδ-Fasern (dünn myelinisiert)",
+        "Zweiter Schmerz (langsam, dumpf, schwer lokalisierbar): C-Fasern (unmyelinisiert)",
+        "TRPV1: thermischer Nozizeptor; öffnet bei >43°C, niedrigem pH, Capsaicin; Ionenkanal der TRP-Familie",
+        "Piezo-Kanäle (mechanosensitiv): Piezo2 in Merkelzellen + Aβ-Fasern (Berührung); auch nozizeptive Mechanozeptoren",
+        "Nav1.7: spannungsaktivierter Na-Kanal in Nozizeptoren; Channelopathien: Erythromelalgie (leichter aktivierbar → Hypersensitivität); kongenitale Schmerzunempfindlichkeit (Nav1.7-Verlust); olfaktorische Fasern auch betroffen → Anosmie",
+        "Peptiderge Nozizeptoren (CGRP): thermisch, terminieren in äußerer Lamina II; Axonreflex → Vasodilatation (Flare-Reaktion)",
+        "Nicht-peptiderge Nozizeptoren (IB4): mechanisch, terminieren in innerer Lamina II; exprimieren P2X3 (ATP-Rezeptor)",
+        "Gate-Control-Theorie: GABAerge/Glycinerge Interneurone im Hinterhorn hemmen Weitergabe; Verlust → Allodynie",
+        "Übertragener Schmerz (Head-Zonen): viszerale + kutane Afferenzen konvergieren auf dasselbe 2. Neuron im Hinterhorn → Hirnkann nicht unterscheiden",
+        "Projizierter Schmerz: Läsion am Nerv irgendwo → Schmerz im gesamten Versorgungsgebiet (Dermatom)",
+        "Deszendierende Schmerzhemmung: Griseum centrale → Raphe-Kerne (Serotonin) + Locus coeruleus (Noradrenalin) → hemmen Hinterhorn-Neurone; Opioide hemmen Übertragung im Hinterhorn + enthemmen deszendierende hemmende Bahnen",
+        "Brown-Séquard: Halbseitige RüMa-Läsion → ipsilateral Hinterstrang-Ausfall (Tiefensensibilität) + ipsilateral Lähmung; kontralateral spinothalamischer Ausfall (Schmerz, Temperatur)",
+      ]},
+      { titel: "Trigeminus-Kernsäulen & Läsionsdiagnostik", punkte: [
+        "Ncl. mesencephalicus n. trigemini: Propriozeption ALLER Hirnnerven (auch Augenmuskel-Proprio läuft hier durch!); enthält pseudounipolare Zellkörper (kein Endkern!)",
+        "Ncl. principalis n. trigemini (Pons): epikritische Sensibilität Gesicht (Fein-Mechano, Vibration)",
+        "Ncl. spinalis n. trigemini (Pons bis Zervikalmark): protopathische Sensibilität (Schmerz, Temperatur, grobe Mechano) des Gesichts; Sölder-Linien bei zentraler Läsion (konzentrisch um Mund)",
+        "ALLE allg. somatosensiblen Fasern der Hirnnerven (VII, IX, X) enden in den Trigeminus-Endkernen!",
+        "Läsion Hinterstrang: ipsilateral Lagesinn/Vibration/2-Punkt-Diskrimination + ipsilateral sensorische Ataxie",
+        "Läsion Tractus spinothalamicus lat.: kontralateral Schmerz/Temperatur-Verlust",
+        "Läsion Lemniscus medialis (Medulla): kontralateral Ausfall aller Qualitäten außer Schmerz/Temperatur",
+        "Dissoziierte Empfindungsstörung: Hinterhorn-Läsion → Schmerz/Temperatur ipsilateral ausgefallen; Hinterstrang erhalten (da 1. Neuron zieht direkt hoch)",
+        "Syringomyelie: Höhlenbildung im RüMa → dissoziierte Empfindungsstörung (Commissura alba betroffen)",
+      ]},
+    ]
+  },
+  {
+    id: "hirnnerven", titel: "Hirnstamm & Hirnnerven", emoji: "🔌", farbe: "#1abc9c",
+    sektionen: [
+      { titel: "Hirnstamm-Gliederung", punkte: [
+        "3 Abschnitte: Mesencephalon (III-IV), Pons (V-VIII), Medulla oblongata (IX-XII)",
+        "Horizontale Gliederung: Basis (absteigende Bahnen) → Tegmentum (Koordinationszentren) → Tectum (nur Mesencephalon: Lamina quadrigemina/Vierhügelplatte)",
+        "Mesencephalon: Crus cerebri (Pyramidenbahnen); Tegmentum (Ncl. ruber, SNpc, SNr, FR); Tectum (Colliculus sup. = Sehreflex; Colliculus inf. = Hörreflex); Aquaeductus mesencephali",
+        "Pons: Pars basilaris (Ncll. pontis → Fibrae pontis transversae → Kleinhirn via Ped. cer. med.); Tegmentum (FR, Hirnnervenkerne); IV. Ventrikel",
+        "Medulla oblongata: Pyramides (Tractus corticospinalis + Decussatio pyramidum); Olive (Ncl. olivaris inf.); Tegmentum (FR, Kerne IX-XII); Zentralkanal/IV. Ventrikel",
+        "Sensibler Kern: lateral; motorischer Kern: medial (Sulcus limitans trennt efferent/afferent)",
+        "Formatio reticularis: diffuses Netz im Tegmentum; Atemzentrum + Kreislaufzentrum; ARAS; Schmerzmodulation; extrapyramidale Motorik",
+        "Fasciculus longitudinalis medialis (MLF): koordiniert Augen-, Hals-, Rumpfmotorik; verbindet Kerne III, IV, VI + Vestibularkerne; Läsion → internukleäre Ophthalmoplegie",
+      ]},
+      { titel: "Hirnnerven-Übersicht", punkte: [
+        "N. I (Olfactorius): sez. viszeroafferent; Geruch; kein echter HN (Telencephalon-Ausstülpung)",
+        "N. II (Opticus): sez. somatoafferent; Sehen; kein echter HN (Diencephalon-Ausstülpung); Chiasma: nasale Anteile kreuzen",
+        "N. III (Oculomotorius): allg. somatoefferent (M. rectus sup/med/inf, M. obliquus inf, M. levator palpebrae); allg. viszeroefferent PARASYMPATH. (Ncl. accessorius/Edinger-Westphal → Ggl. ciliare → M. sphincter pupillae (Miosis) + M. ciliaris (Akkommodation))",
+        "N. IV (Trochlearis): allg. somatoefferent; M. obliquus superior; EINZIGER HN der dorsal austritt (unter Colliculus inferior)",
+        "N. V (Trigeminus): allg. somatoafferent (sensibel Gesicht, Dura, Hornhaut, vordere 2/3 Zunge); sez. viszeroefferent/Radix motoria (NUR in V3/Mandibularis): Kaumuskulatur, M. tensor tympani, M. tensor veli palatini, M. mylohyoideus, Venter ant. M. digastricus",
+        "N. VI (Abducens): allg. somatoefferent; M. rectus lateralis",
+        "N. VII (Facialis): sez. viszeroefferent (mimische Muskulatur, M. stapedius, M. stylohyoideus, Venter post. M. digastricus); allg. viszeroefferent PARASYMPATH. (Ncl. salivatorius sup. → Ggl. pterygopalatinum → Gl. lacrimalis, Gll. nasales, palatinae; Ggl. submandibulare → Gl. submandibularis, sublingualis); sez. viszeroafferent (Geschmack vordere 2/3 Zunge via Chorda tympani); allg. somatoafferent (Ohrmuschel)",
+        "N. VIII (Vestibulocochlearis): sez. somatoafferent (Gleichgewicht + Gehör); efferente Fasern zu Haarzellen (selektive Frequenzverstärkung)",
+        "N. IX (Glossopharyngeus): allg. viszeroefferent PARASYMPATH. (Ncl. salivatorius inf. → Ggl. oticum → Glandula parotidea); sez. viszeroefferent (obere Schlundmuskulatur); sez. viszeroafferent (Geschmack hint. 1/3 Zunge); allg. viszeroafferent (Sinus caroticus/Glomus caroticum: Presso- u. Chemorezeptoren); allg. somatoafferent (Paukenhöhle, Tuba auditiva, hint. 1/3 Zunge)",
+        "N. X (Vagus): allg. viszeroefferent PARASYMPATH. (Ncl. dorsalis n. vagi → Brust- + Bauchorgane bis Cannon-Böhm-Punkt = linke Kolonflexur); sez. viszeroefferent (Kehlkopf/untere Schlundmuskulatur via Ncl. ambiguus); sez. viszeroafferent (Geschmack Epiglottis); allg. viszeroafferent (Kehlkopf, Brust/Bauch bis Cannon-Böhm); allg. somatoafferent (Dura hint. Schädelgrube, Ohrmuschel)",
+        "N. XI (Accessorius): Radix ext. (sez. viszeroefferent): M. sternocleidomastoideus + M. trapezius; Radix int.: Anschluss an Vagus → Kehlkopfmuskulatur",
+        "N. XII (Hypoglossus): allg. somatoefferent; Zungenmuskulatur; Austritt: Sulcus preolivaris (zwischen Pyramide und Olive)",
+        "Ncl. ambiguus: gemeinsamer motorischer Kern für N. IX, X, XI (Schlund/Kehlkopf) + präganglionäre Herzfasern",
+        "Ncll. tractus solitarii: Geschmack (oberer Teil = Ncl. gustatorius: VII, IX, X) + allg. viszeroafferent (unterer Teil: IX, X)",
+        "Periphere Fazialisparese: STIRN mitgelähmt! (weil ipsilaterale Innervation der Stirn wegfällt); Ursachen: idiopath. (Herpes-Reaktivierung/Bell-Lähmung), Zoster, Tumor (Akustikusneurinom im KBW → auch N. VIII betroffen!), Trauma",
+        "Zentrale Fazialisparese: Stirn NICHT gelähmt (bilaterale Innervation der Stirnkerne); Hinweis auf Schlaganfall!",
+      ]},
+      { titel: "Parasympathische Kopfganglien", punkte: [
+        "Ggl. ciliare (N. III/Edinger-Westphal): M. sphincter pupillae (Miosis) + M. ciliaris (Akkommodation)",
+        "Ggl. pterygopalatinum (N. VII/Ncl. salivorarius sup.): Gl. lacrimalis, Gll. nasales, palatinae",
+        "Ggl. submandibulare (N. VII/Ncl. salivorarius sup.): Gl. submandibularis, sublingualis",
+        "Ggl. oticum (N. IX/Ncl. salivorarius inf.): Gl. parotidea, Gll. buccales, labiales",
+        "Ncl. dorsalis n. vagi: Herz, Lunge, GI-Trakt bis Cannon-Böhm-Punkt (N. X, kein Ganglion im Kopf)",
+      ]},
+    ]
+  },
+  {
+    id: "hippocampus", titel: "Hippocampus & Gedächtnis", emoji: "💾", farbe: "#3498db",
+    sektionen: [
+      { titel: "Hippocampus-Anatomie & Schaltkreis", punkte: [
+        "Hippocampus: Teil des Temporallappens + limbisches System; Cornu ammonis (CA) + Gyrus dentatus + Subiculum",
+        "Hippocampusformation: Hippocampus + Area entorhinalis (Gyrus parahippocampalis)",
+        "Limbisches System: Gyrus cinguli, Gyrus parahippocampalis, Hippocampus, Amygdala, Corpus amygdaloideum, Septumkerne; diencephal: Ncl. anterior thalami, Corpora mammillaria, Habenula",
+        "Trisynaptischer Kreislauf: Area entorhinalis (= Tor zum Hippocampus) → Gyrus dentatus → CA3 → CA1 → (Subiculum → Fornix → Corpus mammillare → Ncl. ant. thalami → Kortex)",
+        "Papez-Kreis: Hippocampus → Fornix → Corpus mammillare → Tractus mammillothalamicus → Ncl. ant. thalami → Gyrus cinguli → Hippocampus",
+        "Amygdala: Emotionales Lernen, Angst; wichtig bei Konditionierung; liegt im Temporallappen",
+        "Neurogenese im Hippocampus: lebenslang im Gyrus dentatus (stark kontrovers, aber Evidenz vorhanden); gefördert durch Lernen + physische Aktivität; gehemmt durch Alkohol, Stress, Alter, Depression; Antidepressiva können Neurogenese fördern",
+      ]},
+      { titel: "Gedächtnisformen", punkte: [
+        "Deklaratives (explizites) Gedächtnis: Hippocampus essentiell; episodisch (biograf. Erinnerungen) + semantisch (Faktenwissen)",
+        "Nicht-deklaratives (implizites) Gedächtnis: OHNE Hippocampus; prozedural (Radfahren, Skifahren), Bahnung (Priming), Habituation, klassische Konditionierung",
+        "Patient H.M.: bilaterale Hippocampektomie → anterograde Amnesie (keine neuen deklarat. Erinnerungen) + räumliche Amnesie; KEIN retrograder Verlust; motorisches Lernen (Spiegel-Test) intakt!",
+        "Zeitliche Einteilung: Gedächtnisspur (Minuten) → Kurzzeitgedächtnis/Arbeitsgedächtnis (Stunden) → Langzeitgedächtnis (Tage/für immer)",
+        "Hippocampus: kodiert Langzeiterinnerungen; SPEICHERT aber nicht langfristig → Transfer in Neokortex (auditorisch → auditorischer Kortex; visuell → visueller Kortex etc.)",
+      ]},
+      { titel: "LTP – Molekulare Grundlage des Lernens", punkte: [
+        "LTP (Langzeit-Potenzierung): kurze starke Stimulation → lang anhaltende Verstärkung der synaptischen Übertragung; input-spezifisch",
+        "NMDA-Rezeptor als Koinzidenzdetektor: braucht GLEICHZEITIG (1) Glutamat-Bindung + (2) postsynaptische Depolarisation → Mg2+-Block aufgehoben → Ca2+-Einstrom",
+        "LTP-Mechanismus: Ca2+-Einstrom → CaMKII-Autophosphorylierung → PKA-Aktivierung → AMPA-Rezeptor-Einbau → stärkeres EPSP; Silent Synapses (NMDA+ aber kein AMPA) werden durch LTP 'aktiviert'",
+        "Frühe LTP (<2h): Translation aus vorhandener mRNA; keine Transkription nötig",
+        "Späte LTP (>2h): de-novo Transkription (Aktivierung von Transkriptionsfaktoren, z.B. CREB); Immediate Early Genes (Arc, cFOS) werden exprimiert",
+        "LTD (Langzeit-Depression): niedrigfrequente Stimulation → Abschwächung der Synapse (AMPA-Abbau)",
+        "Exzitotoxizität: Überaktivierung von NMDA-Rezeptoren → massiver Ca2+-Einstrom → Zelluntergang",
+        "Engramm: Gedächtnisspur; spezifisches Neuronenmuster das bei Erinnerung aktiviert wird; Aktivierung von IEGs (Arc, cFOS) markiert beteiligte Neurone",
+        "Alzheimer: β-Amyloid-Oligomere beeinträchtigen LTP → Gedächtnisbildung gestört",
+      ]},
+    ]
+  },
+  {
+    id: "schlaf", titel: "Schlaf & Bewusstsein", emoji: "😴", farbe: "#9b59b6",
+    sektionen: [
+      { titel: "Schlafstadien (AASM)", punkte: [
+        "N1 (Dämmerzustand): Alpha-Aktivität verschwindet → Theta (4-7 Hz); langsame Augenbewegungen; Muskelspannung hoch; noch kein echter Schlaf",
+        "N2 (Schlaf): Schlafspindeln (12-14 Hz, zunehmend-abnehmend) + K-Komplexe (langsame hohe Amplitude, evozierbar); keine typischen Augenbewegungen; Muskelspannung nimmt ab",
+        "N3 (Tiefschlaf): Delta-Wellen (<2 Hz, >75 μV Amplitude); keine Augenbewegungen; Muskelspannung minimal; homöostatisch reguliert (= Marker für Schlafschuld); v.a. in erster Nachthälfte",
+        "REM (Paradoxer Schlaf): EEG wie Wachzustand; schnelle Augenbewegungen (Sakkaden); MUSKELATONIE; Weckschwelle hoch; v.a. in zweiter Nachthälfte; durch innere Uhr reguliert; bizarres Träumen",
+        "Non-REM-Träume: realistisch; REM-Träume: fantasievoll/bizarr; man träumt in BEIDEN Phasen!",
+        "Schlafzyklus: ~90-100 min; 4-7 Zyklen pro Nacht; Tiefschlaf nimmt über Nacht ab; REM nimmt zu",
+        "Deltaaktivität (N3) widerspiegelt vorangegangene Wachdauer (homöostatischer Prozess)",
+        "Läsion Pons: Verlust REM; Träumen erhalten; Läsion Vorderhirn: Traumverlust; REM erhalten",
+      ]},
+      { titel: "Schlaf-Wach-Regulation", punkte: [
+        "Thalamus als Rhythmusgenerator: Burst-Modus (Schlaf, hyperpolarisiert) ↔ Feuermodus (Wach, depolarisiert)",
+        "Schlaf-Übergang: Glutamatkonzentration im Thalamus nimmt ab → Hyperpolarisation → Schrittmacherstrom (If-Kanal) → transienter Ca2+-Kanal → Burst-AP",
+        "Kortikale slow oscillations: Down-state (Hyperpolarisation) ↔ Up-state (Depolarisation); synchron im N3",
+        "Synchrone Aktivität = große EEG-Amplitude; asynchron = kleine Amplitude",
+        "ARAS (Aufsteigendes Retikuläres Aktivierungssystem): FR → Thalamus → Kortex; Transmitter: ACh, NA, Serotonin, Histamin, Glutamat halten Wachheit",
+        "Neuromodulatoren: Noradrenalin (Locus coeruleus, Pons), Serotonin (Raphe-Kerne), Histamin (post. Hypothalamus), ACh (pontine Kerne + basales Vorderhirn)",
+        "Frontallappen schläft am tiefsten (viel gebraucht tagsüber); Schlaf ist lokal-spezifisch und gebrauchsabhängig",
+        "REM-Schlafstörung (RBD): fehlende Muskelatonie im REM → Ausleben von Träumen; Frühzeichen von Lewy-Körper-Erkrankungen (Parkinson, DLB)",
+        "DLB-Kriterien: fluktuierende Kognition, optische Halluzinationen, REM-Schlafstörung, Parkinsonsymptome",
+      ]},
+    ]
+  },
+  {
+    id: "schmerz", titel: "Nozizeption & Schmerz", emoji: "⚡", farbe: "#e74c3c",
+    sektionen: [
+      { titel: "Schmerztheorie & Schmerzbahnen", punkte: [
+        "Schmerz = unangenehmes Sinnes- und Gefühlserlebnis; passiert im Gehirn, nicht im Körper; Aδ-Fasern = erster Schmerz (schnell, scharf); C-Fasern = zweiter Schmerz (langsam, dumpf)",
+        "Neospinothalamischer Anteil: VPL → S1 (Lokalisation und Art des Schmerzes bewusst)",
+        "Paläospinothalamischer Anteil: intralaminäre + mediale Thalamuskerne (Ncl. centromedianus) → limbisches System, Hirnstamm (affektive Komponente, vegetative Reaktionen)",
+        "Tractus spinomesencephalicus: → Griseum centrale (PAG, periaqueduktales Grau) → deszendierende Hemmung",
+        "Tractus spinoreticularis: → Formatio reticularis → vegetative Reflexe (Blutdruck↑, Atmung↑) + retikulothalamische Fasern",
+        "Gate-Control: Inhibitorische GABA/Glycin-Interneurone im Hinterhorn; Verlust → Allodynie (Aβ-Fasern lösen Schmerz aus)",
+        "Deszendierende Hemmung: Griseum centrale → Ncll. raphes (Serotonin) + Locus coeruleus (Noradrenalin) → spinale Hemmung der Projektionsneurone; Antidepressiva (NRI/SNRI) → verstärken endogene Schmerzhemmung",
+        "Opioide: hemmen Hinterhorn-Übertragung + enthemmen deszendierende Hemmung; μ/δ/κ-Rezeptoren via inhibitorische G-Proteine",
+      ]},
+      { titel: "Schmerzformen", punkte: [
+        "Akuter nozizeptiver Schmerz: Aktivierung der Nozizeptoren durch noxischen Reiz",
+        "Entzündungsschmerz: Sensibilisierung durch Entzündungsmediatoren (Prostaglandine, Bradykinin, H+, NGF); COX-Hemmer → Schmerzlinderung",
+        "Neuropathischer Schmerz: primäre Nervenschädigung (DM-Neuropathie, Zosterneuralgie, Nerventrauma); Spontanaktivität in Nozizeptoren; Mikroglia-Aktivierung → hemmt spinale Inhibition; schlecht auf klassische Analgetika; besser: Antikonvulsiva, SNRI/NRI",
+        "Hyperalgesie: herabgesetzte Schmerzschwelle (Sensibilisierung); Entzündung",
+        "Allodynie: Schmerz durch nicht-noxische Reize (z.B. Aβ-Fasern aktivieren Schmerzbahn); neuropathisch",
+        "Spontanschmerz: ohne peripheren Input; neuropathisch",
+        "Head-Zonen: viszerale + kutane Afferenzen konvergieren; Herzinfarkt → Schmerz in Schulter/Oberarm",
+        "Projizierter Schmerz: Nervenirritation → Schmerz im gesamten Dermatom (z.B. Bandscheibenvorfall)",
+        "Stressanalgesie: endogene Hemmung verstärkt bei Stress; deszendierende Hemmung permanent aktiv",
+      ]},
+    ]
+  },
+  {
+    id: "neuro_erkrankungen", titel: "Neurologische Erkrankungen", emoji: "🏥", farbe: "#2c3e50",
+    sektionen: [
+      { titel: "Schlaganfall", punkte: [
+        "Ischämischer Infarkt (80%): arterielle Hypoperfusion; Ursachen: Makroangiopathie (Arteriosklerose, 20-40%), Mikroangiopathie (lakunäre Infarkte, 20-40%), kardiale Embolie (Vorhofflimmern, 25-40%)",
+        "Hämorrhagischer Infarkt (20%): intrazerebrale Blutung oder Subarachnoidalblutung",
+        "A. cerebri media-Infarkt: Hemiplegie + Hemihypästhesie kontralateral; Aphasie (dominant); Neglect (nicht-dominant); Blickwendung zur Seite der Läsion",
+        "Lysetherapie: i.v. rtPA innerhalb 4.5h; Thrombektomie (mechanisch) bei großen Gefäßverschlüssen",
+        "Dense media sign im CT: hyperdens = Thrombus in A. cerebri media",
+        "Wernicke-Mann-Gangbild: nach Schlaganfall; steifes extendiertes Bein + flektierter Arm; Zirkumduktion",
+        "Neglect: Vernachlässigung einer Körperseite; parietale Läsion nicht-dominante Hemisphäre; Anosognosie",
+        "NIH Stroke Scale: Standardisierter Schlaganfall-Score",
+      ]},
+      { titel: "Multiple Sklerose (MS)", punkte: [
+        "Entzündlich-neurodegenerative ZNS-Erkrankung; Demyelinisierung; Erkrankungsgipfel ~30J; F:M 2-3:1",
+        "Verlauf: schubförmig-remittierend (häufigste Form) oder progressiv",
+        "Diagnosekritereien: räumliche + zeitliche Dissemination (McDonald-Kriterien 2017)",
+        "Typische Manifestationen: Internukleäre Ophthalmoplegie (MLF-Läsion, N. III kann nicht adduzieren, aber Konvergenz erhalten!), Optikusneuritis (Schmerz!, Visusverlust, Rotentsättigung, RAPD), Sensibilitätsstörungen, Lhermitte-Zeichen (Elektrisiergefühl bei Kopfflexion), Fatigue",
+        "Periventrikuläre Plaques im MRI (T2/FLAIR): Dawson-Finger (senkrecht zum Balken); im Liquor: oligoklonale Banden, erhöhtes IgG",
+        "Therapie: Kortison (Schubtherapie), Immuntherapien (Interferon-β, Glatiramerazetat, Natalizumab etc.), Symptomatisch",
+      ]},
+      { titel: "Epilepsie & Motoneuron-Erkrankungen", punkte: [
+        "Epilepsie: ≥2 unprovozierte Anfälle ODER 1 Anfall + >60% Risiko für Wiederholung (EEG/MRI)",
+        "Generalisiert tonisch-klonischer Anfall (Grand Mal): Bewusstlosigkeit, Zungenbiss (lateral!), Enuresis, Muskelkater, postiktale Erschöpfung/Amnesie",
+        "Status epilepticus: Anfall >5 min oder mehrere ohne Erholung → Notfall!",
+        "Anfallsauslöser: Schlafmangel, Alkohol/-entzug, Medikamente, metabolische Störungen",
+        "Differentialdiagnose: Synkope (kürzer, kein Muskelkater, rasches Erwachen)",
+        "ALS (Amyotrophe Lateralsklerose): Degeneration 1. + 2. MN; meist sporadisch; Überleben 3-4 Jahre; keine Kausatherapie; Riluzol (NMDA-Antagonist); Beatmungsunterstützung",
+        "1. MN-Zeichen: Spastik, Hyperreflexie, Babinski+; 2. MN-Zeichen: Atrophie, Faszikulationen, Areflexie",
+        "Spinale Muskelatrophie: nur 2. MN; Primäre Lateralsklerose: nur 1. MN",
+      ]},
+    ]
+  },
+  {
+    id: "demenz", titel: "Demenz & Neurodegeneration", emoji: "🧩", farbe: "#7f8c8d",
+    sektionen: [
+      { titel: "Alzheimer-Demenz (AD)", punkte: [
+        "Häufigste neurodegenerative Erkrankung; kortikale Demenz mit Gedächtnisstörung als Leitsymptom",
+        "Histologie: β-Amyloid-Plaques (aus APP-Abbau; schädigt Gefäßendothel + hemmt LTP) + neurofibrilläre Tangles (hyperphosphoryliertes Tau-Protein → stört axonalen Transport)",
+        "Degeneration: v.a. temporobasal (Hippocampus!), temporoparietal; cholinergem Kerngebiet geht zugrunde",
+        "Klinisch: keine neuen Erinnerungen mehr bildbar (anterograde Amnesie); Faktenwissen lange erhalten",
+        "Biomarker: Aβ-42 im Liquor ↓; Gesamt-Tau ↑; p-Tau (Phospho-Tau) ↑; Amyloid-PET +; FDG-PET: Hypometabolismus temporal-parietal; Atrophie im MRI (Hippocampus)",
+        "Staging: Stage 0 (keine Biomarker) → Stage 1 (Amyloid) → Stage 2 (+ Neurodegeneration) → Stage 3 (+ kognitives Defizit = MCI/AD)",
+        "Therapie: Cholinesterasehemmer (leichte-mittelgradige AD; Donepezil); Memantin (NMDA-Antagonist; mittel-schwere AD); rein symptomatisch!",
+        "Risikofaktoren (modifizierbar, 40%): Bildung, Gehörverlust, Hirntrauma, Bluthochdruck, Alkohol, Rauchen, körperliche Inaktivität",
+        "Glymphatisches System: β-Amyloid-Abtransport im Schlaf → Schlafmangel → AD-Risiko ↑",
+      ]},
+      { titel: "Andere Demenzen & Diagnose", punkte: [
+        "Lewy-Körper-Demenz (DLB): α-Synuclein-Aggregation; Kernsymptome: fluktuierende Kognition, optische Halluzinationen, REM-Schlafstörung (Ausleben von Träumen!), Parkinson-Symptome; Amyloid-PET meist +; Aβ-42 ↓ im Liquor; DLB = Demenz VOR oder gleichzeitig mit Parkinson",
+        "Parkinson-Demenz: Demenz erst >1 Jahr nach Parkinson-Motorik",
+        "Frontotemporale Demenzen (FTLD): Tau oder TDP-43-Pathologie; Atrophie frontal/temporal; Amyloid-PET unauffällig; jung (<60J); Verhaltensvariante (Enthemmung, Persönlichkeitswandel), Semantische Demenz (Sprachverständnis↓), Primär Progressive Aphasie (Sprachfluss↓)",
+        "LATE-Demenz: >85J; TDP-43 im limbischen System; sieht aus wie AD; Amyloid-PET unauffällig!; isolierter Hippocampus betroffen; milder Verlauf",
+        "Vaskuläre Demenz: lakunäre Infarkte bei Mikroangiopathie; stufenweiser Abbau; Risikofaktoren für Gefäße; MRI obligat",
+        "MCI (Mild Cognitive Impairment): Gedächtnisstörung ohne Alltagsbeeinträchtigung; kann Frühstadium sein",
+        "Demenz-Diagnose: Neuropsychologische Tests (MoCA, Neuropsych. Testbatterie), MRI, PET, Liquor (Aβ, tau, Zellzahl, Schrankenstörung), EEG, Labor",
+        "Ausschlussdiagnosen: Hypothyreose, Vitaminmangel (B12), Medikamente, NPH (Normaldruckhydrozephalus), Depression ('Pseudodemenz'), Hirntumore, Subduralhämatom",
+      ]},
+    ]
+  },
+];
+
+// ─────────────────────────────────────────────
+// VOLLSTÄNDIGE QUIZ-FRAGEN
+// ─────────────────────────────────────────────
+const ALLE_FRAGEN = [
+  // MOTORIK
+  {k:"motorik", f:"Welche Kortexschicht enthält die Betz-Riesenzellen und bildet die Pyramidenbahn?", a:["Schicht II","Schicht IV","Schicht V","Schicht VI"], r:2},
+  {k:"motorik", f:"Der supplementär-motorische Kortex (SMA) erhält Eingang von:", a:["Zerebellum","Basalganglien","Thalamus VPL","Hypothalamus"], r:1},
+  {k:"motorik", f:"Welche Bahn ist für die Feinmotorik der Finger (Präzisionsgriff) entscheidend?", a:["Tractus vestibulospinalis","Tractus rubrospinalis","Tractus corticospinalis lateralis (CM-System)","Tractus reticulospinalis medialis"], r:2},
+  {k:"motorik", f:"Das ventromediale motorische System innerviert v.a.:", a:["Distale Fingermuskulatur (Feinmotorik)","Rumpf- und Standmotorik (Extensoren)","Kaumuskulatur","Augenmuskeln"], r:1},
+  {k:"motorik", f:"Wo kreuzt der Tractus corticospinalis lateralis (Pyramidenbahn)?", a:["Auf Segmentebene im RüMa","In der Medulla oblongata (Decussatio pyramidum)","Im Mesencephalon","Im Pons"], r:1},
+  {k:"motorik", f:"Was ist der Unterschied zwischen oberen und unteren Motoneuronläsionen? Unteres MN →", a:["Spastik + Hyperreflexie","Atrophie + Faszikulationen + Areflexie","Babinski positiv","Kloni"], r:1},
+  {k:"motorik", f:"Welchen Effekt haben γ-Motoneurone?", a:["Kontraktion extrafusaler Muskelfasern","Regulierung der Muskelspindel-Empfindlichkeit; verhindern Spindelpause","Hemmung von Antagonisten","Aktivierung des Golgi-Sehnenorgans"], r:1},
+  {k:"motorik", f:"Das Golgi-Sehnenorgan registriert:", a:["Muskellänge (Dehnung)","Muskelspannung (Kraft); verhindert Überkontraktion","Gelenkwinkel","Hautdruck"], r:1},
+  {k:"motorik", f:"Die Renshaw-Zelle vermittelt:", a:["Rekurrente Erregung des α-MN","Rekurrente Hemmung des α-MN (via Glycin); Dämpfung überschießender Kontraktion","Disinhibition des Antagonisten","Feed-forward-Inhibition des Hinterhorns"], r:1},
+  {k:"motorik", f:"Dezerebrierungsstarre entsteht durch Läsion auf Höhe der Vierhügelplatte. Folge:", a:["Überwiegen hemmender Einflüsse auf Extensoren","Wegfall hemmender Kortexeinflüsse auf Extensoren → exzessive Streckung","Schlaffe Lähmung aller Extremitäten","Überwiegen der Flexoren"], r:1},
+  {k:"motorik", f:"Welcher Tractus ist Teil des ventromedialen Systems und steuert Augenbewegungen?", a:["Tractus rubrospinalis","Tractus tectospinalis (vom Colliculus superior)","Tractus corticospinalis lateralis","Tractus spinothalamicus"], r:1},
+  {k:"motorik", f:"Der Babinski-Reflex ist bei Erwachsenen pathologisch. Er deutet auf Schädigung der:", a:["Kleinhirnbahn","Pyramidenbahn","Hinterstränge","Basalganglien"], r:1},
+  // ZEREBELLUM
+  {k:"zerebellum", f:"Welcher Kleinhirnkern ist mit dem Vestibulozerebellum (Lobus flocculonodularis) assoziiert?", a:["Ncl. dentatus","Ncl. interpositus","Ncl. fastigii","Ncl. vestibularis"], r:3},
+  {k:"zerebellum", f:"Der Kletterfasereingang stammt ausschließlich aus:", a:["Ncll. pontis","Substantia nigra","Unterer Olive (Ncl. olivaris inferior)","Vestibularkernen"], r:2},
+  {k:"zerebellum", f:"Welche Zelle ist der EINZIGE Ausgang des Kleinhirnkortex?", a:["Körnerzelle (glutamaterg)","Purkinje-Zelle (GABAerg)","Golgi-Zelle","Korbzelle"], r:1},
+  {k:"zerebellum", f:"LTD an der Parallelfaser-Purkinjezell-Synapse wird ausgelöst durch:", a:["Aktivierung nur der Kletterfaser","Aktivierung nur der Parallelfaser","Gleichzeitige Aktivierung von Parallelfaser UND Kletterfaser","Aktivierung der Golgi-Zelle"], r:2},
+  {k:"zerebellum", f:"Ncl. interpositus = ?", a:["Ncl. dentatus + Ncl. fastigii","Ncl. emboliformis + Ncl. globosus","Ncl. fastigii + Ncl. dentatus","Ncl. globosus allein"], r:1},
+  {k:"zerebellum", f:"Welcher Kleinhirnstiel führt NUR Afferenzen (aus den Ncll. pontis)?", a:["Pedunculus cerebellaris inferior","Pedunculus cerebellaris medius","Pedunculus cerebellaris superior","Alle führen Efferenzen"], r:1},
+  {k:"zerebellum", f:"Dysmetrie beim Kleinhirnpatienten entsteht weil:", a:["Der Thalamus überaktiv ist","Der Antagonist zu spät bremst → Bewegung überschießt (Hypermetrie)","Die Muskelspindeln fehlen","Der Kortex nicht aktiviert wird"], r:1},
+  {k:"zerebellum", f:"Zerebrozerebellum (Pontozerebellum) erhält seinen Haupteingang über:", a:["Tractus spinocerebellaris posterior (direkt aus RüMa)","Cortex → Ncll. pontis → Fibrae pontis transversae → Ped. cer. medius","Untere Olive → Kletterfasern","Vestibularapparat"], r:1},
+  {k:"zerebellum", f:"Was ist ein Complex Spike (CS) in einer Purkinje-Zelle?", a:["Einfaches Aktionspotential durch Parallelfaser","Massive Entladung durch Kletterfasereingang; Ca2+-AP in Dendriten; dauert ~10-50ms","Spontane Entladung bei Ruhe","Hemmung durch GABA"], r:1},
+  {k:"zerebellum", f:"Motorisches Lernen im Kleinhirn entspricht:", a:["Belohnungslernen","Unüberwachtem Lernen","Überwachtem Lernen (error-based); Fehlersignal über Olive/Kletterfasern","Prozeduralem Gedächtnis ohne Fehlersignal"], r:2},
+  // BASALGANGLIEN
+  {k:"basalganglien", f:"Welche Neurotransmitter-Eigenschaft haben alle Projektionsneurone der Basalganglien?", a:["Glutamaterg (erregend)","GABAerg (hemmend)","Dopaminerg","Cholnerg"], r:1},
+  {k:"basalganglien", f:"Der direkte Weg der Basalganglien führt zu einer Disinhibition des Thalamus. Welche MSN-Typ ist beteiligt?", a:["D2-exprimierende MSN → GPe","D1-exprimierende MSN → GPi/SNr direkt (hemmt GPi → Thalamus frei)","Glutamaterge STN-Neurone","Dopaminerge SNc-Neurone"], r:1},
+  {k:"basalganglien", f:"Bei Morbus Parkinson fällt Dopamin aus. Folge für die Basalganglien-Balance:", a:["Direkter Weg (D1) überwiegt → Hyperkinese","Indirekter Weg (D2) überwiegt → Thalamus stärker gehemmt → Akinese","GPe wird stärker gehemmt → Hyperkinese","STN wird gehemmt → weniger Inhibition"], r:1},
+  {k:"basalganglien", f:"Huntington-Krankheit: Welche Neurone degenerieren zuerst?", a:["Dopaminerge Neurone der SNpc","D2-exprimierende MSN im Striatum (indirekter Weg)","Purkinje-Zellen","D1-MSN (direkter Weg)"], r:1},
+  {k:"basalganglien", f:"CAG-Repeat im Huntingtin-Gen: Ab wie vielen Repeats besteht vollständige Penetranz?", a:[">20 Repeats",">35 Repeats",">40 Repeats",">70 Repeats"], r:2},
+  {k:"basalganglien", f:"Welches ist die einzige exzitatorische (glutamaterge) Struktur INNERHALB der Basalganglien-Schaltkreise?", a:["Striatum","GPe","GPi","Nucleus subthalamicus (STN)"], r:3},
+  {k:"basalganglien", f:"Tiefe Hirnstimulation bei Parkinson zielt auf den:", a:["GPi","Thalamus VPL","Nucleus subthalamicus (STN)","Ncl. caudatus"], r:2},
+  {k:"basalganglien", f:"Die limbische Schleife der Basalganglien verläuft über:", a:["Ncl. caudatus → GPi","Putamen → GPe → STN","Ncl. accumbens + ventrales Pallidum → Thalamus MD","Amygdala → Hippocampus → Entorhinalkorex"], r:2},
+  {k:"basalganglien", f:"Chorea bei Huntington entsteht durch:", a:["Überwiegen des indirekten Weges → mehr Thalamus-Hemmung","Wegfall des indirekten Weges → direkter Weg dominiert → Thalamus-Disinhibition → Hyperkinese","Purkinje-Zell-Verlust im Kleinhirn","Dopaminmangel in der SNpc"], r:1},
+  // THALAMUS
+  {k:"thalamus", f:"Welcher Thalamuskern leitet Somatosensorik von Rumpf und Extremitäten weiter?", a:["VPM (Ncl. ventralis posteromedialis)","VPL (Ncl. ventralis posterolateralis)","VL (Ncl. ventralis lateralis)","CGM (Corpus geniculatum mediale)"], r:1},
+  {k:"thalamus", f:"Der VPM-Kern empfängt Afferenzen vom:", a:["Hinterstrang (Ncll. gracilis et cuneatus)","N. trigeminus (Gesichtssensibilität)","Kleinhirn","Rückenmark direkt"], r:1},
+  {k:"thalamus", f:"Welcher Thalamuskern empfängt Afferenzen aus Kleinhirn und GPi und projiziert zu M1/PM/SMA?", a:["VPL","VPM","VL und VA","Ncll. anteriores"], r:2},
+  {k:"thalamus", f:"Was ist beim Thalamus im Wach-Modus anders als im Schlaf-Modus?", a:["Thalamus ist hyperpolarisiert → Burst-Modus → blockiert Sinnesweiterleitung","Thalamus ist depolarisiert → kontinuierliches Feuern → Reize werden weitergeleitet","Thalamus ist vollständig inaktiv","Glutamatkonzentration steigt im Schlaf"], r:1},
+  {k:"thalamus", f:"Der Nucleus reticularis des Thalamus:", a:["Ist exzitatorisch und aktiviert den Kortex","Ist GABAerg; hemmt andere Thalamuskerne (Filterung von Signalen)","Empfängt Afferenzen aus dem Kleinhirn","Gehört zum Papez-Kreis"], r:1},
+  {k:"thalamus", f:"Schlafspindeln (12-14 Hz) sind typisch für:", a:["Non-REM-Schlaf N1 (Einschlafen)","Non-REM-Schlaf N2","Non-REM-Schlaf N3 (Tiefschlaf)","REM-Schlaf"], r:1},
+  {k:"thalamus", f:"Welche Ausnahme gibt es beim Thalamus als Schaltstelle für Sinne?", a:["Sehen","Hören","Riechen (Olfaktion) – geht direkt zum Kortex","Tasten"], r:2},
+  {k:"thalamus", f:"Papez-Kreis – korrekte Reihenfolge?", a:["Hippocampus → Amygdala → Hypothalamus → Thalamus → Kortex","Hippocampus → Fornix → Corpus mammillare → Ncl. ant. thalami → Gyrus cinguli → Hippocampus","Hippocampus → Thalamus VL → Basalganglien → Kortex","Amygdala → Hippocampus → Entorhinalkorex → Thalamus MD"], r:1},
+  // NEOCORTEX / EEG
+  {k:"neocortex", f:"EEG misst hauptsächlich:", a:["Aktionspotentiale der Pyramidenzellen","Summenpotentiale postsynaptischer Potentiale (EPSP/IPSP)","Neurotransmitter-Konzentrationen","Blutflussänderungen (BOLD-Effekt)"], r:1},
+  {k:"neocortex", f:"Delta-Wellen (0.5-3 Hz) im EEG treten auf bei:", a:["Entspanntem Wachzustand mit Augen zu","Aktivem, konzentriertem Wachzustand","Non-REM-Schlaf N3 (Tiefschlaf)","REM-Schlaf"], r:2},
+  {k:"neocortex", f:"Welche Kortexschicht empfängt die spezifischen thalamischen Afferenzen (Core-Weg)?", a:["Schicht I","Schicht II","Schicht IV","Schicht VI"], r:2},
+  {k:"neocortex", f:"Schicht VI des Neokortex projiziert zurück zum:", a:["Striatum","Thalamus (kortikothalamisch)","Rückenmark","Kleinhirn"], r:1},
+  {k:"neocortex", f:"Was ist der dorsale visuelle Pfad (Wo-Weg)?", a:["Okzipital → Temporal: Objekterkennung","Okzipital → Parietal: räumliches Sehen, Raumverarbeitung","Temporal → Frontal: Arbeitsgedächtnis","Parietal → Okzipital: Aufmerksamkeit"], r:1},
+  {k:"neocortex", f:"Der primäre auditorische Kortex liegt in:", a:["Gyrus postcentralis (Parietallappen)","Gyrus temporales transversi (Heschl-Querwindungen)","Gyrus frontalis inferior","Gyrus occipitalis"], r:1},
+  {k:"neocortex", f:"Neglect entsteht typischerweise bei Läsion des:", a:["Frontallappens dominant","Parietallappens nicht-dominante Hemisphäre (rechts)","Okzipitallappens","Kleinhirns"], r:1},
+  // HIRNHÄUTE & BLUT
+  {k:"hirnhaeute", f:"Der Epiduralraum ist im Schädel physiologisch NICHT vorhanden, weil:", a:["Die Arachnoidea mit dem Schädelknochen verwachsen ist","Die Dura gleichzeitig Periost ist und direkt am Knochen anhaftet","Der Subarachnoidalraum das gesamte Volumen ausfüllt","Die Blut-Hirn-Schranke ihn verhindert"], r:1},
+  {k:"hirnhaeute", f:"Wo wird der Liquor hauptsächlich produziert?", a:["Arachnoidea","Pia mater","Plexus choroideus (Plexusepithel)","Ependymzellen der Ventrikelwände"], r:2},
+  {k:"hirnhaeute", f:"Die Apertura mediana (Foramen Magendie) verbindet:", a:["3. mit 4. Ventrikel","4. Ventrikel mit Subarachnoidalraum","Seitenventrikel mit 3. Ventrikel","Zentralkanal mit 4. Ventrikel"], r:1},
+  {k:"hirnhaeute", f:"A. cerebri media versorgt und ist gefürchtet wegen:", a:["Okzipitallappen; Blindheit","Mediale Hemisphäre; Beinlähmung","Laterale Hemisphäre + Capsula interna → Hemiplegie! + Aphasie/Neglect","Kleinhirn; Ataxie"], r:2},
+  {k:"hirnhaeute", f:"Was ist das glymphatische System?", a:["Lymphgefäße im Gehirn","Perivaskuläre Räume (Virchow-Robin) → Liquor spült Hirnparenchym; v.a. im Schlaf; Abtransport von Metaboliten (z.B. β-Amyloid)","Ventrikelsystem","Blut-Hirn-Schranke"], r:1},
+  {k:"hirnhaeute", f:"Zirkumventrikuläre Organe haben KEINE Blut-Hirn-Schranke. Welches NICHT dazu?", a:["Glandula pinealis","Plexus choroideus","Area postrema","Hippocampus"], r:3},
+  {k:"hirnhaeute", f:"Die Blut-Liquor-Schranke wird gebildet durch:", a:["Astrozytenfüsschen + nicht-fenestrierte Endothelzellen","Plexusepithel mit Tight Junctions (fenestrierte Kapillaren + dichte Epithelzellen)","Ependymzellen mit Tight Junctions","Pia mater + Arachnoidea"], r:1},
+  // RÜCKENMARK
+  {k:"rueckenmark", f:"Welche Segmente bilden den Plexus brachialis (Arminnervation)?", a:["C1-C4","C5-Th1","Th1-L1","L1-L4"], r:1},
+  {k:"rueckenmark", f:"Wo liegt der Sympathikus (präganglionäre Neurone) im Rückenmark?", a:["C1-C7 (Halsmark)","C8-L2/3 (Ncl. intermediolateralis, Seitenhorn)","L1-S1","S2-S4 (Parasympathikus)"], r:1},
+  {k:"rueckenmark", f:"Was ist ein Dermatom?", a:["Hautareal eines peripheren Nervs","Hautareal eines Spinalnervs (segmental)","Muskelinnervationsgebiet eines MN","Innervationsgebiet des N. trigeminus"], r:1},
+  {k:"rueckenmark", f:"Das Hinterhorn des Rückenmarks enthält:", a:["α-Motoneurone (Skelettmuskel)","Präganglionäre Sympathikus-Neurone","Sensorische Neurone; 1. Synapse der protopathischen Sensibilität (Tractus spinothalamicus)","Interneurone der Haltungsmotorik"], r:2},
+  {k:"rueckenmark", f:"Die weiße Substanz im RüMa nimmt von zervikal nach kaudal:", a:["Zu (mehr Bahnen unten)","Ab (Bahnen treten aus; kaudal weniger Bahnen)","Bleibt konstant","Nimmt erst zu dann ab"], r:1},
+  {k:"rueckenmark", f:"Tractus spinocerebellaris posterior – welche Aussage ist korrekt?", a:["Kreuzt auf Segmentebene und zieht kontralateral","Bleibt ipsilateral; Clarke-Säule → Ped. cer. inferior → Kleinhirn; unbewusste Propriozeption","Kreuzt in Medulla oblongata","Leitet bewusste Propriozeption zum Thalamus"], r:1},
+  // SOMATOSENSORIK
+  {k:"somatosensorik", f:"Welche Rezeptoren sind langsam adaptierend mit kleinem rezeptivem Feld (Feinwahrnehmung)?", a:["Pacini-Körperchen (RA-II)","Ruffini-Körperchen (SA-II)","Merkel-Zellen (SA-I) und Meissner-Körperchen (FA-I)","Haarfollikelrezeptoren"], r:2},
+  {k:"somatosensorik", f:"Die Hinterstrangbahn (lemniskales System) leitet und kreuzt wo?", a:["Schmerz und Temperatur; kreuzt segmental im RüMa","Tastsinn und bewusste Propriozeption; kreuzt in Medulla oblongata (Lemniscus medialis)","Unbewusste Propriozeption; kreuzt im Kleinhirn","Viszerale Afferenzen; kreuzt im Thalamus"], r:1},
+  {k:"somatosensorik", f:"Der Tractus spinothalamicus lateralis kreuzt:", a:["In der Medulla oblongata","Im selben Rückenmarkssegment (oder 1-2 Segmente verschoben); sofort kontralateral","Im Thalamus","Im Pons"], r:1},
+  {k:"somatosensorik", f:"TRPV1-Kanal: Was öffnet ihn?", a:["Vibration und Berührung","Noxische Hitze (>43°C), niedriger pH, Capsaicin → thermische Nozizeptoren","Dehnung der Haut (Ruffini)","Niedrige Temperaturen (<15°C)"], r:1},
+  {k:"somatosensorik", f:"Brown-Séquard-Syndrom: Halbseitige RüMa-Läsion. Was fällt auf welcher Seite aus?", a:["Alles auf der ipsilateralen Seite","Alles auf der kontralateralen Seite","Ipsilateral: Motorik + Tiefensensibilität; kontralateral: Schmerz + Temperatur","Kontralateral: alles; ipsilateral: nichts"], r:2},
+  {k:"somatosensorik", f:"Dissoziierte Empfindungsstörung: Schmerz/Temperatur ausgefallen bei erhaltener Berührung. Läsion wo?", a:["Hinterstrang","Lemniscus medialis","Hinterhorn (Substantia gelatinosa) oder Syringomyelie (Commissura alba)","Cortex S1"], r:2},
+  // HIRNNERVEN
+  {k:"hirnnerven", f:"N. trochlearis (IV) versorgt und tritt aus wo?", a:["M. rectus lateralis; seitlich am Pons","M. obliquus superior; DORSAL unter Colliculi inferiores (einziger HN dorsal!)","M. rectus medialis; aus Fossa interpeduncularis","M. obliquus inferior; im Kleinhirnbrückenwinkel"], r:1},
+  {k:"hirnnerven", f:"Periphere Fazialisparese – charakteristisches Merkmal?", a:["Stirn NICHT gelähmt (bilaterale Innervation erhalten)","Stirn MITGELÄHMT (komplette ipsilaterale Parese); Bell-Lähmung, Herpes, Tumor","Nur Mundwinkel hängend","Isolierte Tränendrüsenstörung"], r:1},
+  {k:"hirnnerven", f:"Welcher Parasympathikuskern versorgt die Glandula parotidea?", a:["Ncl. salivatorius superior (N. VII)","Ncl. salivatorius inferior (N. IX) → Ggl. oticum → Parotis","Ncl. dorsalis n. vagi (N. X)","Ncl. accessorius / Edinger-Westphal (N. III)"], r:1},
+  {k:"hirnnerven", f:"Internukleäre Ophthalmoplegie (INO): Welche Struktur ist läsioniert?", a:["N. III-Kern im Mesencephalon","N. VI-Kern im Pons","Fasciculus longitudinalis medialis (MLF)","Ncl. abducens"], r:2},
+  {k:"hirnnerven", f:"Ncl. ambiguus: welche Funktion?", a:["Sensorischer Kern für Hören (N. VIII)","Parasympathischer Kern für Tränendrüse","Motorischer Kern für Schlund- und Kehlkopfmuskulatur (N. IX, X, XI)","Gustatorischer Kern für Geschmack"], r:2},
+  {k:"hirnnerven", f:"Alle allg. somatosensiblen Fasern der Hirnnerven enden in:", a:["Ncll. vestibulares","Ncll. cochleares","Ncll. tractus solitarii","Trigeminus-Kernsäulen (Ncl. principalis + Ncl. spinalis n. trigemini)"], r:3},
+  {k:"hirnnerven", f:"Die Formatio reticularis des Hirnstamms enthält:", a:["Nur Hirnnervenkerne","Atemzentrum + Kreislaufzentrum + ARAS + Schmerzmodulation (Raphe-Kerne)","Nur aufsteigende Bahnen","Pyramidenbahn"], r:1},
+  // HIPPOCAMPUS
+  {k:"hippocampus", f:"Patient H.M. nach bilateraler Hippocampektomie – was bleibt intakt?", a:["Deklaratives episodisches Gedächtnis","Räumliches Lernen","Nicht-deklaratives / prozedurales Gedächtnis (Motorlernen)","Alle Gedächtnisformen"], r:2},
+  {k:"hippocampus", f:"Trisynaptischer Schaltkreis des Hippocampus:", a:["Amygdala → CA1 → CA3 → Subiculum","Area entorhinalis → Gyrus dentatus → CA3 → CA1","Hippocampus → Fornix → Mammillarkörper → Thalamus","CA1 → CA3 → Gyrus dentatus → Subiculum"], r:1},
+  {k:"hippocampus", f:"NMDA-Rezeptor als Koinzidenzdetektor: Er öffnet nur wenn:", a:["Nur Glutamat bindet","Nur postsynaptische Depolarisation vorhanden ist","GLEICHZEITIG Glutamat + postsynaptische Depolarisation → Mg2+-Block aufgehoben → Ca2+-Einstrom → LTP","Glycin allein bindet"], r:2},
+  {k:"hippocampus", f:"Späte LTP (>2h) erfordert im Unterschied zur frühen LTP:", a:["Nur Phosphorylierung vorhandener Proteine","De-novo Transkription (CREB → Immediate Early Genes z.B. Arc, cFOS); Translation neuer Proteine","Nur AMPA-Rezeptor-Einbau","Calcium-Einstrom allein"], r:1},
+  {k:"hippocampus", f:"Deklaratives Gedächtnis enthält:", a:["Motorprogramme (Radfahren, Skifahren)","Episodisch (biogr. Erinnerungen) + semantisch (Faktenwissen); Hippocampus essentiell","Klassische Konditionierung (Pavlov)","Habituation und Priming"], r:1},
+  {k:"hippocampus", f:"Neurogenese im adulten Gehirn findet hauptsächlich statt im:", a:["Frontallappen","Kleinhirn","Gyrus dentatus des Hippocampus","Basalganglien"], r:2},
+  // SCHLAF
+  {k:"schlaf", f:"REM-Schlaf ist charakterisiert durch:", a:["Delta-Wellen + Muskelatonie + langsame Augenbewegungen","EEG wie Wachzustand + Muskelatonie + schnelle Augenbewegungen","Schlafspindeln + K-Komplexe","Theta-Wellen + hohe Muskelspannung"], r:1},
+  {k:"schlaf", f:"Delta-Wellen im N3 widerspiegeln:", a:["REM-Druck (zirkadiane Regulation)","Homöostatischen Schlafdruck (abhängig von Wachdauer)","Hippocampale Aktivität","Sympathikusaktivität"], r:1},
+  {k:"schlaf", f:"Im REM-Schlaf tritt auf:", a:["Tiefe Muskelhemmung aber realistische Träume","Völlige Muskelatonie; bizarre, fantasievolle Träume; hohe Weckschwelle","Schlafspindeln und K-Komplexe","Delta-Wellen und Tiefschlaf"], r:1},
+  {k:"schlaf", f:"EEG misst primär was?", a:["Aktionspotentiale einzelner Neurone","Summenpotentiale postsynaptischer Potentiale (EPSP+IPSP) tausender Neurone","Blutfluss (BOLD)","Transmitterkonzentrationen"], r:1},
+  // SCHMERZ
+  {k:"schmerz", f:"Gate-Control-Theorie: Welche Zellen hemmen die Schmerzweiterleitung im Hinterhorn?", a:["α-Motoneurone","GABAerge/Glycinerge Interneurone im Hinterhorn (hemmen Projektionsneurone)","Renshaw-Zellen","Golgi-Zellen des Kleinhirns"], r:1},
+  {k:"schmerz", f:"Nav1.7-Channelopathie (Erythromelalgie) führt zu:", a:["Kongenitaler Schmerzunempfindlichkeit","Erhöhter Schmerzempfindlichkeit (Kanal leichter aktivierbar)","Taubheitsgefühl","Allodynie durch Aβ-Fasern"], r:1},
+  {k:"schmerz", f:"Übertragener Schmerz (Head-Zonen) entsteht weil:", a:["Schmerzbahnen kreuzen auf falscher Seite","Viszerale + kutane Afferenzen auf dasselbe 2. Neuron im Hinterhorn konvergieren","Griseum centrale gestört ist","Sympathikusfasern aktiviert werden"], r:1},
+  {k:"schmerz", f:"Deszendierende Schmerzhemmung: Welche Transmitter sind beteiligt?", a:["Acetylcholin + Dopamin","Serotonin (Raphe-Kerne) + Noradrenalin (Locus coeruleus) → hemmen spinale Nozizeption","Glutamat + Glycin","GABA + Histamin"], r:1},
+  // ERKRANKUNGEN
+  {k:"neuro_erkrankungen", f:"Zentrale vs. periphere Fazialisparese: Womit unterscheidet man sie?", a:["Geschmacksstörung","Ob die Stirn gelähmt ist (peripher: ja; zentral: nein – bilat. Innervation erhalten)","Augenlidschluss","Hörverlust"], r:1},
+  {k:"neuro_erkrankungen", f:"Schlaganfall mit Hemiplegie links, Neglect links, Blickwendung rechts: Welches Gefäß?", a:["A. cerebri posterior rechts","A. cerebri media rechts (laterale Hemisphäre + Capsula interna)","A. cerebri anterior links","A. basilaris"], r:1},
+  {k:"neuro_erkrankungen", f:"Multiple Sklerose: typisches MRT-Zeichen?", a:["Kortikale Atrophie","Periventrikuläre Plaques (Dawson-Finger: senkrecht zum Balken in T2/FLAIR)","Hippocampus-Atrophie","Basalganglien-Verkalkungen"], r:1},
+  {k:"neuro_erkrankungen", f:"ALS: Warum kombinierte Zeichen von 1. + 2. MN?", a:["Nur 1. MN degeneriert","Nur 2. MN degeneriert","Beide MN degenerieren → Spastik + Hyperreflexie (1. MN) + Atrophie + Faszikulationen (2. MN)","Kleinhirn-Degeneration"], r:2},
+  // DEMENZ
+  {k:"demenz", f:"Alzheimer histologisch: Welche zwei Kennzeichen?", a:["Lewy Bodies + α-Synuclein","β-Amyloid-Plaques + neurofibrilläre Tangles (Tau-Protein)","TDP-43 + FUS","Prionprotein + Spongiosierung"], r:1},
+  {k:"demenz", f:"Lewy-Körper-Demenz (DLB) Kernsymptom welches bei Parkinson-Demenz fehlt:", a:["Parkinson-Motorik","REM-Schlafstörung (Ausleben von Träumen)","Demenz vor oder gleichzeitig mit Motorik (bei PD-Demenz: erst MN, dann >1J später Demenz)","Bradykinese"], r:2},
+  {k:"demenz", f:"Frontotemporale Demenz (FTLD): Was ist unauffällig im Vergleich zur AD?", a:["FDG-PET","MRI (Atrophie)","Amyloid-PET (unauffällig! Differenzierung zu AD)","Tau im Liquor"], r:2},
+  {k:"demenz", f:"Cholinesterasehemmer wirken bei AD, weil:", a:["Sie β-Amyloid-Plaques auflösen","Cholinerges Kerngebiet degeneriert → ACh-Mangel → Hemmung des ACh-Abbaus verlängert Wirkung","Sie Tau-Phosphorylierung hemmen","Sie Neurogenese fördern"], r:1},
+  {k:"demenz", f:"LATE-Demenz – was ist charakteristisch?", a:["Amyloid-PET positiv + jung (<60J)",">85J; TDP-43 im limbischen System; Amyloid-PET UNAUFFÄLLIG; isolierter Hippocampus; milder Verlauf","Lewy Bodies im ganzen Gehirn","Frontotemporale Atrophie"], r:1},
+];
+
+// ─────────────────────────────────────────────
+// HILFSFUNKTIONEN
+// ─────────────────────────────────────────────
+function mische(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+// ─────────────────────────────────────────────
+// MAIN APP
+// ─────────────────────────────────────────────
+function App() {
+  const [seite, setSeite] = useState("home");
+  const [aktivesThema, setAktivesThema] = useState(null);
+  const [aktiveSek, setAktiveSek] = useState(null);
+
+  // Quiz state
+  const [quizFragen, setQuizFragen] = useState([]);
+  const [qIdx, setQIdx] = useState(0);
+  const [gewaehlt, setGewaehlt] = useState(null);
+  const [punkte, setPunkte] = useState(0);
+  const [fertig, setFertig] = useState(false);
+  const [quizKat, setQuizKat] = useState("alle");
+  const [quizAnzahl, setQuizAnzahl] = useState(20);
+
+  const starteQuiz = useCallback((kat = quizKat, anz = quizAnzahl) => {
+    let pool = kat === "alle" ? ALLE_FRAGEN : ALLE_FRAGEN.filter(f => f.k === kat);
+    const gemischt = mische(pool).slice(0, Math.min(anz, pool.length));
+    setQuizFragen(gemischt);
+    setQIdx(0); setGewaehlt(null); setPunkte(0); setFertig(false);
+    setSeite("quiz");
+  }, [quizKat, quizAnzahl]);
+
+  const aktFrage = quizFragen[qIdx];
+  const prozentzahl = quizFragen.length > 0 ? Math.round((punkte / quizFragen.length) * 100) : 0;
+
+  const C = { bg:"#0a0a18", card:"rgba(255,255,255,0.04)", border:"rgba(255,255,255,0.08)", text:"#e8dfd0", sub:"#9090a0", accent:"#5b8dee" };
+
+  const s = {
+    page: { minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'Georgia',serif", paddingBottom:40 },
+    nav: { background:"rgba(0,0,0,0.6)", borderBottom:`1px solid ${C.border}`, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", backdropFilter:"blur(12px)", position:"sticky", top:0, zIndex:200 },
+    wrap: { maxWidth:860, margin:"0 auto", padding:"20px 16px" },
+    btn: (col="#2a3a4a", aktiv=false) => ({ background:aktiv?col:col, border:`1px solid ${aktiv?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.1)"}`, color:C.text, borderRadius:8, padding:"7px 14px", cursor:"pointer", fontSize:12, fontFamily:"inherit", letterSpacing:"0.04em" }),
+    karte: (farbe) => ({ background:`linear-gradient(135deg,${farbe}16,${farbe}06)`, border:`1px solid ${farbe}35`, borderRadius:12, padding:"18px 16px", cursor:"pointer", transition:"all 0.2s" }),
+  };
+
+  const NavBar = () => (
+    <div style={s.nav}>
+      <div onClick={()=>{setSeite("home");setAktivesThema(null);setAktiveSek(null);}} style={{cursor:"pointer"}}>
+        <div style={{fontSize:10,letterSpacing:"0.2em",color:C.sub,textTransform:"uppercase"}}>Medizin · 2.SJ · UZH</div>
+        <div style={{fontSize:18,fontWeight:"bold"}}>🧬 TB ZNS Lernhilfe</div>
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        <button style={s.btn("#1e3a5f",seite==="uebersicht")} onClick={()=>{setSeite("uebersicht");setAktivesThema(null);setAktiveSek(null);}}>📚 Übersicht</button>
+        <button style={s.btn("#1e4a2a",seite==="quiz_setup"||seite==="quiz")} onClick={()=>setSeite("quiz_setup")}>🎯 Quiz</button>
+      </div>
+    </div>
+  );
+
+  // HOME
+  if (seite==="home") return (
+    <div style={s.page}>
+      <NavBar/>
+      <div style={s.wrap}>
+        <div style={{textAlign:"center",padding:"36px 0 28px"}}>
+          <div style={{fontSize:52,marginBottom:10}}>🧠</div>
+          <h1 style={{fontSize:28,margin:"0 0 6px",letterSpacing:"-0.5px"}}>TB ZNS – Vollständige Lernhilfe</h1>
+          <p style={{color:C.sub,fontSize:13,margin:"0 0 6px"}}>Nils Zweifel · Frühling 2022 · 2SJ-B-Med-UZH</p>
+          <p style={{color:C.sub,fontSize:13,margin:0}}>{ALLE_FRAGEN.length} Quizfragen · {THEMEN.length} Themengebiete · {THEMEN.reduce((s,t)=>s+t.sektionen.reduce((a,k)=>a+k.punkte.length,0),0)} Lernpunkte</p>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:28}}>
+          <div onClick={()=>{setSeite("uebersicht");}} style={{...s.karte("#5b8dee"),textAlign:"center"}}>
+            <div style={{fontSize:32}}>📚</div>
+            <div style={{fontSize:16,fontWeight:"bold",margin:"8px 0 4px",color:"#7aaeff"}}>Übersicht & Lernkarten</div>
+            <div style={{fontSize:12,color:C.sub}}>{THEMEN.length} Themen mit detaillierten Kernpunkten nach Sektionen</div>
+          </div>
+          <div onClick={()=>setSeite("quiz_setup")} style={{...s.karte("#2ecc71"),textAlign:"center"}}>
+            <div style={{fontSize:32}}>🎯</div>
+            <div style={{fontSize:16,fontWeight:"bold",margin:"8px 0 4px",color:"#2ecc71"}}>Quiz starten</div>
+            <div style={{fontSize:12,color:C.sub}}>{ALLE_FRAGEN.length} Fragen, wählbare Kategorie und Anzahl</div>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+          {THEMEN.map(t=>(
+            <div key={t.id} onClick={()=>{setAktivesThema(t);setAktiveSek(null);setSeite("detail");}} style={{...s.karte(t.farbe),display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:24}}>{t.emoji}</span>
+              <div>
+                <div style={{fontSize:13,fontWeight:"bold",color:t.farbe}}>{t.titel}</div>
+                <div style={{fontSize:11,color:C.sub}}>{t.sektionen.length} Sektionen</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ÜBERSICHT
+  if (seite==="uebersicht") return (
+    <div style={s.page}>
+      <NavBar/>
+      <div style={s.wrap}>
+        <h2 style={{fontSize:20,marginBottom:16,color:"#c8b090"}}>📚 Themenübersicht</h2>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {THEMEN.map(t=>(
+            <div key={t.id} onClick={()=>{setAktivesThema(t);setAktiveSek(null);setSeite("detail");}} style={s.karte(t.farbe)}>
+              <div style={{fontSize:26,marginBottom:4}}>{t.emoji}</div>
+              <div style={{fontSize:15,fontWeight:"bold",color:t.farbe}}>{t.titel}</div>
+              <div style={{fontSize:11,color:C.sub,marginTop:2}}>{t.sektionen.length} Sektionen · {t.sektionen.reduce((a,s)=>a+s.punkte.length,0)} Punkte</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // THEMA DETAIL
+  if (seite==="detail" && aktivesThema) return (
+    <div style={s.page}>
+      <NavBar/>
+      <div style={s.wrap}>
+        <button style={{...s.btn("#333"),marginBottom:16,fontSize:12}} onClick={()=>{setSeite("uebersicht");setAktivesThema(null);}}>← Zurück</button>
+        <div style={{fontSize:30,marginBottom:6}}>{aktivesThema.emoji}</div>
+        <h2 style={{fontSize:22,color:aktivesThema.farbe,margin:"0 0 4px"}}>{aktivesThema.titel}</h2>
+        <p style={{color:C.sub,fontSize:12,margin:"0 0 20px"}}>{aktivesThema.sektionen.reduce((a,s)=>a+s.punkte.length,0)} Kernpunkte in {aktivesThema.sektionen.length} Sektionen</p>
+
+        <div style={{marginBottom:16,display:"flex",gap:8,flexWrap:"wrap"}}>
+          <button style={{...s.btn("#222"),fontSize:11}} onClick={()=>setAktiveSek(null)}>Alle anzeigen</button>
+          {aktivesThema.sektionen.map((sek,i)=>(
+            <button key={i} style={{...s.btn(aktiveSek===i?"#333":"#222",aktiveSek===i),fontSize:11,borderColor:aktiveSek===i?aktivesThema.farbe:"rgba(255,255,255,0.1)"}} onClick={()=>setAktiveSek(aktiveSek===i?null:i)}>{sek.titel}</button>
+          ))}
+        </div>
+
+        {aktivesThema.sektionen.filter((_,i)=>aktiveSek===null||aktiveSek===i).map((sek,si)=>(
+          <div key={si} style={{marginBottom:20}}>
+            <div style={{fontSize:13,fontWeight:"bold",color:aktivesThema.farbe,letterSpacing:"0.05em",marginBottom:10,paddingBottom:6,borderBottom:`1px solid ${aktivesThema.farbe}30`}}>
+              {sek.titel}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {sek.punkte.map((p,pi)=>(
+                <div key={pi} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px",display:"flex",gap:10,alignItems:"flex-start"}}>
+                  <span style={{color:aktivesThema.farbe,minWidth:20,fontSize:11,fontWeight:"bold",paddingTop:2}}>{String(pi+1).padStart(2,"0")}</span>
+                  <span style={{fontSize:13,lineHeight:"1.6",color:"#d0c8b8"}}>{p}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <div style={{marginTop:20,padding:14,background:C.card,border:`1px solid ${C.border}`,borderRadius:10,textAlign:"center"}}>
+          <button style={{...s.btn("#1e4a2a"),fontSize:13,padding:"9px 22px"}} onClick={()=>starteQuiz(aktivesThema.id,15)}>
+            🎯 Quiz zu diesem Thema starten ({ALLE_FRAGEN.filter(f=>f.k===aktivesThema.id).length} Fragen)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // QUIZ SETUP
+  if (seite==="quiz_setup") return (
+    <div style={s.page}>
+      <NavBar/>
+      <div style={s.wrap}>
+        <h2 style={{fontSize:20,marginBottom:20,color:"#c8b090"}}>🎯 Quiz konfigurieren</h2>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:20,marginBottom:16}}>
+          <div style={{fontSize:13,color:C.sub,marginBottom:10}}>Kategorie:</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            <button style={{...s.btn("#1e3a5f",quizKat==="alle"),fontSize:11,borderColor:quizKat==="alle"?"#5b8dee":"rgba(255,255,255,0.1)"}} onClick={()=>setQuizKat("alle")}>Alle ({ALLE_FRAGEN.length})</button>
+            {THEMEN.map(t=>(
+              <button key={t.id} style={{...s.btn(`${t.farbe}20`,quizKat===t.id),fontSize:11,borderColor:quizKat===t.id?t.farbe:"rgba(255,255,255,0.1)"}} onClick={()=>setQuizKat(t.id)}>
+                {t.emoji} {t.titel} ({ALLE_FRAGEN.filter(f=>f.k===t.id).length})
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:20,marginBottom:20}}>
+          <div style={{fontSize:13,color:C.sub,marginBottom:10}}>Anzahl Fragen:</div>
+          <div style={{display:"flex",gap:8}}>
+            {[10,15,20,30,"alle"].map(n=>{
+              const pool = quizKat==="alle"?ALLE_FRAGEN:ALLE_FRAGEN.filter(f=>f.k===quizKat);
+              const max = pool.length;
+              const val = n==="alle"?max:Math.min(n,max);
+              return <button key={n} style={{...s.btn("#222",quizAnzahl===val),fontSize:11,borderColor:quizAnzahl===val?"#5b8dee":"rgba(255,255,255,0.1)"}} onClick={()=>setQuizAnzahl(val)}>{n==="alle"?`Alle (${max})`:n}</button>;
+            })}
+          </div>
+        </div>
+        <button style={{...s.btn("#1e4a2a"),fontSize:15,padding:"12px 32px",width:"100%",cursor:"pointer"}} onClick={()=>starteQuiz(quizKat,quizAnzahl)}>
+          Quiz starten →
+        </button>
+      </div>
+    </div>
+  );
+
+  // QUIZ
+  if (seite==="quiz" && !fertig && aktFrage) {
+    const themaInfo = THEMEN.find(t=>t.id===aktFrage.k);
+    return (
+      <div style={s.page}>
+        <NavBar/>
+        <div style={s.wrap}>
+          <div style={{marginBottom:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:12,color:C.sub}}>
+              <span>Frage {qIdx+1} / {quizFragen.length}</span>
+              <span style={{color:"#2ecc71"}}>✓ {punkte} richtig</span>
+            </div>
+            <div style={{background:"rgba(255,255,255,0.07)",borderRadius:99,height:4}}>
+              <div style={{background:"linear-gradient(90deg,#2ecc71,#5b8dee)",borderRadius:99,height:"100%",width:`${(qIdx/quizFragen.length)*100}%`,transition:"width 0.3s"}}/>
+            </div>
+            {themaInfo && <div style={{marginTop:8,fontSize:11,color:themaInfo.farbe}}>{themaInfo.emoji} {themaInfo.titel}</div>}
+          </div>
+
+          <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:22,marginBottom:14}}>
+            <div style={{fontSize:11,color:C.sub,letterSpacing:"0.1em",marginBottom:10,textTransform:"uppercase"}}>Frage</div>
+            <p style={{fontSize:16,lineHeight:"1.6",margin:0}}>{aktFrage.f}</p>
+          </div>
+
+          <div style={{display:"flex",flexDirection:"column",gap:9}}>
+            {aktFrage.a.map((ans,i)=>{
+              let bg=C.card, border=C.border, tc=C.sub;
+              if(gewaehlt!==null){
+                if(i===aktFrage.r){bg="rgba(46,204,113,0.15)";border="#2ecc71";tc="#2ecc71";}
+                else if(i===gewaehlt){bg="rgba(231,76,60,0.15)";border="#e74c3c";tc="#e74c3c";}
+              }
+              return (
+                <div key={i} onClick={()=>{if(gewaehlt!==null)return;setGewaehlt(i);if(i===aktFrage.r)setPunkte(p=>p+1);}} style={{background:bg,border:`1px solid ${border}`,borderRadius:10,padding:"12px 16px",cursor:gewaehlt!==null?"default":"pointer",transition:"all 0.15s",display:"flex",gap:12,alignItems:"flex-start"}}>
+                  <span style={{color:tc,fontWeight:"bold",minWidth:18,fontSize:13,paddingTop:1}}>
+                    {gewaehlt!==null?(i===aktFrage.r?"✓":i===gewaehlt?"✗":String.fromCharCode(65+i)):String.fromCharCode(65+i)}
+                  </span>
+                  <span style={{color:tc,fontSize:13,lineHeight:"1.5"}}>{ans}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {gewaehlt!==null && (
+            <div style={{marginTop:16,display:"flex",justifyContent:"flex-end"}}>
+              <button style={{...s.btn("#1e3a5f"),fontSize:14,padding:"10px 24px"}} onClick={()=>{
+                if(qIdx+1>=quizFragen.length){setFertig(true);}
+                else{setQIdx(i=>i+1);setGewaehlt(null);}
+              }}>
+                {qIdx+1>=quizFragen.length?"Ergebnis anzeigen →":"Nächste →"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // QUIZ ERGEBNIS
+  if (seite==="quiz" && fertig) return (
+    <div style={s.page}>
+      <NavBar/>
+      <div style={{...s.wrap,textAlign:"center",paddingTop:40}}>
+        <div style={{fontSize:56,marginBottom:14}}>{prozentzahl>=80?"🏆":prozentzahl>=60?"👍":"📖"}</div>
+        <h2 style={{fontSize:26,margin:"0 0 8px"}}>Quiz abgeschlossen!</h2>
+        <p style={{color:C.sub,margin:"0 0 24px"}}>Du hast {punkte} von {quizFragen.length} Fragen richtig.</p>
+        <div style={{display:"inline-block",background:prozentzahl>=80?"rgba(46,204,113,0.15)":prozentzahl>=60?"rgba(241,196,15,0.15)":"rgba(231,76,60,0.15)",border:`2px solid ${prozentzahl>=80?"#2ecc71":prozentzahl>=60?"#f1c40f":"#e74c3c"}`,borderRadius:12,padding:"14px 30px",marginBottom:28}}>
+          <div style={{fontSize:40,fontWeight:"bold",color:prozentzahl>=80?"#2ecc71":prozentzahl>=60?"#f1c40f":"#e74c3c"}}>{prozentzahl}%</div>
+          <div style={{fontSize:13,color:C.sub}}>{prozentzahl>=80?"Ausgezeichnet!":prozentzahl>=60?"Gut! Noch etwas üben.":"Nochmal die Übersicht ansehen!"}</div>
+        </div>
+
+        {/* Fragen-Review */}
+        <div style={{textAlign:"left",marginBottom:24}}>
+          <h3 style={{fontSize:15,margin:"0 0 12px",color:"#c8b090"}}>Alle Fragen im Überblick:</h3>
+          {quizFragen.map((frage,i)=>(
+            <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px",marginBottom:8}}>
+              <div style={{fontSize:11,color:C.sub,marginBottom:4}}>Frage {i+1}</div>
+              <div style={{fontSize:13,marginBottom:6}}>{frage.f}</div>
+              <div style={{fontSize:12,color:"#2ecc71"}}>✓ Richtig: {frage.a[frage.r]}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+          <button style={{...s.btn("#1e3a5f"),fontSize:13,padding:"10px 22px"}} onClick={()=>setSeite("quiz_setup")}>⚙️ Neues Quiz</button>
+          <button style={{...s.btn("#1e4a2a"),fontSize:13,padding:"10px 22px"}} onClick={()=>starteQuiz(quizKat,quizAnzahl)}>🔄 Nochmal</button>
+          <button style={{...s.btn("#333"),fontSize:13,padding:"10px 22px"}} onClick={()=>{setSeite("uebersicht");setAktivesThema(null);}}>📚 Übersicht</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return <div style={s.page}><NavBar/><div style={s.wrap}><p style={{color:C.sub}}>Lade...</p></div></div>;
+}
+
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
